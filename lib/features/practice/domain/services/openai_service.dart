@@ -50,7 +50,9 @@ class OpenAIService {
 }
 
 final openAIServiceProvider = Provider<OpenAIService>((ref) {
-  // TODO: 환경 변수나 설정에서 API 키를 가져오도록 수정
-  const apiKey = 'your-api-key-here';
+  final apiKey = dotenv.env['OPENAI_API_KEY'] ?? '';
+  if (apiKey.isEmpty) {
+    throw Exception('OpenAI API key not found in environment variables');
+  }
   return OpenAIService(apiKey: apiKey);
 });
