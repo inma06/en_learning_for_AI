@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../features/practice/presentation/screens/speaking_practice_screen.dart';
 
 class PracticeScreen extends ConsumerWidget {
   const PracticeScreen({super.key});
@@ -19,7 +20,12 @@ class PracticeScreen extends ConsumerWidget {
             icon: Icons.mic,
             color: Colors.blue,
             onTap: () {
-              // TODO: 말하기 연습 화면으로 이동
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SpeakingPracticeScreen(),
+                ),
+              );
             },
           ),
           const SizedBox(height: 16),
