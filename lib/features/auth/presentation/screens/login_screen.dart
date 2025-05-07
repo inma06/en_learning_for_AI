@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/routes/app_routes.dart';
 import '../providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerWidget {
@@ -35,14 +37,17 @@ class LoginScreen extends ConsumerWidget {
                 icon: Icons.g_mobiledata,
                 text: 'Google로 계속하기',
                 color: Colors.red,
-                onPressed: () {
+                onPressed: () async {
                   // TODO: Google 로그인 구현
-                  ref.read(authProvider.notifier).login(
+                  await ref.read(authProvider.notifier).login(
                         userId: '1',
                         userName: '테스트 사용자',
                         userEmail: 'test@example.com',
                         token: 'test_token',
                       );
+                  if (context.mounted) {
+                    context.go(AppRoutes.home);
+                  }
                 },
               ),
               const SizedBox(height: 16),

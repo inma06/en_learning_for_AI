@@ -1,61 +1,208 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:flutter_tts/flutter_tts.dart';
+import '../../domain/services/openai_service.dart';
+import '../../domain/usecases/speech_recognition_usecase.dart';
+import '../../domain/usecases/text_to_speech_usecase.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-part 'speaking_practice_provider.freezed.dart';
+class SpeakingPracticeState {
+  final bool isListening;
+  final bool isSpeaking;
+  final bool isInitializing;
+  final bool isProcessing;
+  final String text;
+  final List<Map<String, String>> conversationHistory;
 
-@freezed
-class SpeakingPracticeState with _$SpeakingPracticeState {
-  const factory SpeakingPracticeState({
-    @Default(false) bool isRecording,
-    @Default(false) bool isProcessing,
-    String? userSpeech,
-    String? aiResponse,
-    String? error,
-  }) = _SpeakingPracticeState;
+  SpeakingPracticeState({
+    this.isListening = false,
+    this.isSpeaking = false,
+    this.isInitializing = false,
+    this.isProcessing = false,
+    this.text = '',
+    this.conversationHistory = const [],
+  });
+
+  SpeakingPracticeState copyWith({
+    bool? isListening,
+    bool? isSpeaking,
+    bool? isInitializing,
+    bool? isProcessing,
+    String? text,
+    List<Map<String, String>>? conversationHistory,
+  }) {
+    return SpeakingPracticeState(
+      isListening: isListening ?? this.isListening,
+      isSpeaking: isSpeaking ?? this.isSpeaking,
+      isInitializing: isInitializing ?? this.isInitializing,
+      isProcessing: isProcessing ?? this.isProcessing,
+      text: text ?? this.text,
+      conversationHistory: conversationHistory ?? this.conversationHistory,
+    );
+  }
 }
 
 class SpeakingPracticeNotifier extends StateNotifier<SpeakingPracticeState> {
-  SpeakingPracticeNotifier() : super(const SpeakingPracticeState());
+  final SpeechRecognitionUseCase _speechRecognitionUseCase;
+  final TextToSpeechUseCase _textToSpeechUseCase;
+  final OpenAIService _openAIService;
 
-  Future<void> startRecording() async {
-    state = state.copyWith(
-      isRecording: true,
-      error: null,
-    );
-    // TODO: 음성 인식 시작
+  SpeakingPracticeNotifier(
+    this._speechRecognitionUseCase,
+    this._textToSpeechUseCase,
+    this._openAIService,
+  ) : super(SpeakingPracticeState());
+
+  Future<void> initialize() async {
+    await _textToSpeechUseCase.initialize();
   }
 
-  Future<void> stopRecording() async {
-    state = state.copyWith(
-      isRecording: false,
-      isProcessing: true,
-    );
-    // TODO: 음성 인식 중지 및 OpenAI API 호출
+  void updateCurrentText(String text) {
+    state = state.copyWith(text: text);
   }
 
-  void setUserSpeech(String speech) {
+  void addUserMessage(String text) {
+    final newHistory = List<Map<String, String>>.from(state.conversationHistory)
+      ..add({
+        'role': 'user',
+        'text': text,
+      });
     state = state.copyWith(
-      userSpeech: speech,
-    );
-  }
-
-  void setAiResponse(String response) {
-    state = state.copyWith(
-      aiResponse: response,
-      isProcessing: false,
+      conversationHistory: newHistory,
+      text: '',
     );
   }
 
-  void setError(String error) {
+  void addAIMessage(String text) {
+    final newHistory = List<Map<String, String>>.from(state.conversationHistory)
+      ..add({
+        'role': 'ai',
+        'text': text,
+      });
+    state = state.copyWith(conversationHistory: newHistory);
+  }
+
+  Future<void> startListening() async {
+    if (state.isSpeaking || state.isProcessing) {
+      return;
+    }
+
+    state = state.copyWith(isInitializing: true);
+
+    final hasPermission = await _speechRecognitionUseCase.requestPermission();
+    if (!hasPermission) {
+      state = state.copyWith(isInitializing: false);
+      return;
+    }
+
     state = state.copyWith(
-      error: error,
-      isRecording: false,
-      isProcessing: false,
+      isListening: true,
+      isInitializing: false,
     );
+
+    await _speechRecognitionUseCase.startListening(
+      onResult: (recognizedText) {
+        state = state.copyWith(text: recognizedText);
+      },
+      onComplete: () {
+        stopListening();
+      },
+    );
+  }
+
+  Future<void> stopListening() async {
+    if (!state.isListening) return;
+
+    await _speechRecognitionUseCase.stopListening();
+    state = state.copyWith(isListening: false);
+
+    if (state.text.isEmpty || state.text.length < 3) {
+      state = state.copyWith(text: '');
+      return;
+    }
+
+    try {
+      addUserMessage(state.text);
+
+      state = state.copyWith(
+        isProcessing: true,
+      );
+
+      final response = await _openAIService.getConversationResponse(state.text);
+      addAIMessage(response);
+
+      state = state.copyWith(
+        isProcessing: false,
+        isSpeaking: true,
+      );
+
+      await _textToSpeechUseCase.speak(
+        response,
+        onComplete: () {
+          state = state.copyWith(
+            isSpeaking: false,
+            text: '',
+          );
+        },
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isSpeaking: false,
+        isProcessing: false,
+        text: '',
+      );
+    }
+  }
+
+  Future<String> getConversationResponse(String text) async {
+    try {
+      state = state.copyWith(isProcessing: true);
+      final response = await _openAIService.getConversationResponse(text);
+      state = state.copyWith(isProcessing: false);
+      return response;
+    } catch (e) {
+      state = state.copyWith(isProcessing: false);
+      rethrow;
+    }
+  }
+
+  void dispose() {
+    _speechRecognitionUseCase.dispose();
+    _textToSpeechUseCase.stop();
+    super.dispose();
   }
 }
 
+final openAIServiceProvider = Provider((ref) => OpenAIService(
+      apiKey: dotenv.env['OPENAI_API_KEY'] ?? '',
+    ));
+
 final speakingPracticeProvider =
     StateNotifierProvider<SpeakingPracticeNotifier, SpeakingPracticeState>(
-  (ref) => SpeakingPracticeNotifier(),
-);
+        (ref) {
+  final speechRecognitionUseCase = ref.watch(speechRecognitionUseCaseProvider);
+  final textToSpeechUseCase = ref.watch(textToSpeechUseCaseProvider);
+  final openAIService = ref.watch(openAIServiceProvider);
+  return SpeakingPracticeNotifier(
+    speechRecognitionUseCase,
+    textToSpeechUseCase,
+    openAIService,
+  );
+});
+
+final speechRecognitionUseCaseProvider =
+    Provider<SpeechRecognitionUseCase>((ref) {
+  return SpeechRecognitionUseCase(ref.watch(speechToTextProvider));
+});
+
+final textToSpeechUseCaseProvider = Provider<TextToSpeechUseCase>((ref) {
+  return TextToSpeechUseCase(ref.watch(flutterTtsProvider));
+});
+
+final speechToTextProvider = Provider<stt.SpeechToText>((ref) {
+  return stt.SpeechToText();
+});
+
+final flutterTtsProvider = Provider<FlutterTts>((ref) {
+  return FlutterTts();
+});

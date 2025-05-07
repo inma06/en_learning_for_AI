@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../features/practice/presentation/screens/speaking_practice_screen.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/routes/app_routes.dart';
 
 class PracticeScreen extends ConsumerWidget {
   const PracticeScreen({super.key});
@@ -20,12 +21,7 @@ class PracticeScreen extends ConsumerWidget {
             icon: Icons.mic,
             color: Colors.blue,
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SpeakingPracticeScreen(),
-                ),
-              );
+              context.push(AppRoutes.speakingPractice);
             },
           ),
           const SizedBox(height: 16),
@@ -36,6 +32,7 @@ class PracticeScreen extends ConsumerWidget {
             color: Colors.green,
             onTap: () {
               // TODO: 듣기 연습 화면으로 이동
+              context.push(AppRoutes.listeningPractice);
             },
           ),
           const SizedBox(height: 16),
@@ -46,6 +43,7 @@ class PracticeScreen extends ConsumerWidget {
             color: Colors.orange,
             onTap: () {
               // TODO: 쓰기 연습 화면으로 이동
+              context.push(AppRoutes.writingPractice);
             },
           ),
           const SizedBox(height: 16),
@@ -56,6 +54,7 @@ class PracticeScreen extends ConsumerWidget {
             color: Colors.purple,
             onTap: () {
               // TODO: 단어 연습 화면으로 이동
+              context.push(AppRoutes.vocabularyPractice);
             },
           ),
           const SizedBox(height: 24),
@@ -73,7 +72,7 @@ class PracticeScreen extends ConsumerWidget {
     required VoidCallback onTap,
   }) {
     return Card(
-      elevation: 2,
+      elevation: 1,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
