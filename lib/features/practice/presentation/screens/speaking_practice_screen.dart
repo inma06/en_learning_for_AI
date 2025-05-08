@@ -51,6 +51,18 @@ class _SpeakingPracticeScreenState
     "What's your favorite place to visit?",
   ];
 
+  // CEFR 레벨 설명
+  final Map<String, String> cefrLevelDescriptions = {
+    'A1': '일상적인 아주 간단한 표현을 이해하고 사용할 수 있어요. 자기소개, 인사, 숫자, 시간 등 기초 표현이 가능해요.',
+    'A2':
+        '일상생활에 자주 쓰이는 문장과 표현을 이해할 수 있고, 간단한 요구나 정보를 말할 수 있어요. 여행 시 기본적인 소통이 가능해요.',
+    'B1':
+        '익숙한 주제에 대해 간단한 의견을 말하고 이해할 수 있어요. 직장, 학교, 여가 등 일상에서 꽤 자연스럽게 대화할 수 있어요.',
+    'B2': '원어민과 큰 어려움 없이 대부분의 상황에서 자유롭게 대화할 수 있어요. 논리적으로 자신의 의견을 설명할 수 있어요.',
+    'C1': '다양한 주제에 대해 유창하고 자연스럽게 대화할 수 있어요. 복잡한 문장 구조와 고급 어휘도 잘 활용할 수 있어요.',
+    'C2': '실수 없이 거의 완벽하게 영어를 구사할 수 있어요. 학문적, 전문적 상황에서도 완전한 의사소통이 가능해요.',
+  };
+
   @override
   void initState() {
     super.initState();
@@ -197,6 +209,12 @@ class _SpeakingPracticeScreenState
       appBar: AppBar(
         title: const Text('Speaking Practice'),
         actions: [
+          // 레벨 설명 버튼
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: () => _showLevelDescriptionDialog(),
+            tooltip: '레벨 설명',
+          ),
           if (!state.isLevelAssessment)
             IconButton(
               icon: const Icon(Icons.assessment),
@@ -965,6 +983,100 @@ class _SpeakingPracticeScreenState
         _suggestions = List.from(_initialSuggestions);
       });
     }
+  }
+
+  // 레벨 설명 다이얼로그 표시 함수
+  void _showLevelDescriptionDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'CEFR 레벨 설명',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: cefrLevelDescriptions.entries.map((entry) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue[50],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  entry.key,
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue[700],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                entry.value,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    '확인',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
