@@ -16,8 +16,8 @@ class MainScreen extends ConsumerWidget {
       body: IndexedStack(
         index: currentIndex,
         children: const [
-          LearnScreen(),
           PracticeScreen(),
+          LearnScreen(),
           ProfileScreen(),
         ],
       ),
@@ -28,12 +28,12 @@ class MainScreen extends ConsumerWidget {
         },
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.school),
-            label: '학습',
-          ),
-          NavigationDestination(
             icon: Icon(Icons.sports_esports),
             label: '연습',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.school),
+            label: '학습',
           ),
           NavigationDestination(
             icon: Icon(Icons.person),
