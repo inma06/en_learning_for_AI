@@ -46,6 +46,7 @@ class MyApp extends ConsumerWidget {
 
     return MaterialApp.router(
       title: 'AI 영어 학습',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,

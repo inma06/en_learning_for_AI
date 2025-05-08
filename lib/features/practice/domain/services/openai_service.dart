@@ -6,14 +6,24 @@ import 'dart:convert';
 
 class OpenAIService {
   final String apiKey;
-  final String baseUrl = 'https://api.openai.com/v1/chat/completions';
+  final http.Client _client;
 
-  OpenAIService({required this.apiKey});
+  OpenAIService({required this.apiKey}) : _client = http.Client();
 
-  Future<String> getConversationResponse(String userInput) async {
+  Future<String> convertToEnglish(String text) async {
     try {
-      final response = await http.post(
-        Uri.parse(baseUrl),
+      final prompt = '''
+Convert the following Korean text or Korean-accented English to proper English.
+If the input is in Korean, translate it to English.
+If the input is in Korean-accented English, correct it to proper English.
+Keep the meaning as close as possible to the original.
+
+Input: $text
+
+Output only the English text, without any explanations or additional text.''';
+
+      final response = await _client.post(
+        Uri.parse('https://api.openai.com/v1/chat/completions'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $apiKey',
@@ -23,13 +33,48 @@ class OpenAIService {
           'messages': [
             {
               'role': 'system',
-              'content': 'You are an English conversation practice partner. '
-                  'Respond naturally and help the user improve their English. '
-                  'Keep responses concise and engaging.',
+              'content':
+                  'You are a Korean to English translator and pronunciation corrector.',
             },
             {
               'role': 'user',
-              'content': userInput,
+              'content': prompt,
+            },
+          ],
+          'temperature': 0.3,
+          'max_tokens': 100,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['choices'][0]['message']['content'].trim();
+      } else {
+        throw Exception('Failed to convert text: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error converting text: $e');
+    }
+  }
+
+  Future<String> getResponse(String prompt) async {
+    try {
+      final response = await _client.post(
+        Uri.parse('https://api.openai.com/v1/chat/completions'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $apiKey',
+        },
+        body: jsonEncode({
+          'model': 'gpt-3.5-turbo',
+          'messages': [
+            {
+              'role': 'system',
+              'content': 'You are a helpful English teacher.',
+            },
+            {
+              'role': 'user',
+              'content': prompt,
             },
           ],
           'temperature': 0.7,
@@ -39,12 +84,44 @@ class OpenAIService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['choices'][0]['message']['content'];
+        return data['choices'][0]['message']['content'].trim();
       } else {
-        throw Exception('API 요청 실패: ${response.statusCode}');
+        throw Exception('Failed to get response: ${response.statusCode}');
       }
     } catch (e) {
-      throw Exception('API 호출 중 오류 발생: $e');
+      throw Exception('Error getting response: $e');
+    }
+  }
+
+  Future<String> getConversationResponse(String text) async {
+    return getResponse('''
+The student said: $text
+
+Please respond in a friendly and helpful way. Keep your response concise and natural.''');
+  }
+
+  Future<String> assessEnglishLevel(String text,
+      {required int questionCount}) async {
+    if (questionCount == 0) {
+      return getResponse('''
+You are an English teacher assessing a Korean student's speaking level.
+Ask a simple question to start the assessment.
+Keep the question very basic and easy to understand.
+Do not include any explanations or additional text, just the question.''');
+    } else if (questionCount < 2) {
+      return getResponse('''
+Previous answer: $text
+Question number: ${questionCount + 1}
+
+Ask a follow-up question that is slightly more challenging than the previous one.
+Keep the question appropriate for the student's level based on their previous answer.
+Do not include any explanations or additional text, just the question.''');
+    } else {
+      return getResponse('''
+Based on the student's answers, determine their English level (A1, A2, B1, B2, C1, or C2) and provide brief feedback.
+Format your response exactly like this:
+Level: [level]
+Feedback: [one sentence feedback]''');
     }
   }
 }
