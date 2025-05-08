@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:flutter/foundation.dart';
+import 'package:confetti/confetti.dart';
+import 'dart:math';
 import '../../../../core/utils/permission_handler.dart';
 import '../../../../core/services/web_permission_service.dart';
 import '../../domain/services/speech_service.dart';
 import '../providers/speaking_practice_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SpeakingPracticeScreen extends ConsumerStatefulWidget {
   const SpeakingPracticeScreen({super.key});
@@ -31,8 +34,11 @@ class _SpeakingPracticeScreenState
   String _toastMessage = '';
   final List<Map<String, String>> _conversationHistory = [];
   final ScrollController _scrollController = ScrollController();
+  String _currentLevel = 'A1'; // 기본 레벨 설정
+  List<String> _suggestions = []; // 동적 추천 문장을 위한 리스트
 
-  final List<String> _suggestions = [
+  // 초기 추천 문장
+  final List<String> _initialSuggestions = [
     "What's your favorite hobby?",
     "Tell me about your day.",
     "What's your favorite movie?",
@@ -50,6 +56,8 @@ class _SpeakingPracticeScreenState
     super.initState();
     _initSpeech();
     _initTts();
+    _loadSavedLevel();
+    _suggestions = List.from(_initialSuggestions);
     Future.microtask(() {
       ref.read(speakingPracticeProvider.notifier).initialize();
     });
@@ -112,6 +120,10 @@ class _SpeakingPracticeScreenState
       }
     } else {
       debugPrint('✅ [STT] Speech recognition initialized successfully');
+      // 사용 가능한 로케일 출력
+      final locales = await _speech.locales();
+      debugPrint(
+          '🎤 [STT] Available locales: ${locales.map((l) => l.name).join(', ')}');
     }
   }
 
@@ -184,6 +196,30 @@ class _SpeakingPracticeScreenState
     return Scaffold(
       appBar: AppBar(
         title: const Text('Speaking Practice'),
+        actions: [
+          if (!state.isLevelAssessment)
+            IconButton(
+              icon: const Icon(Icons.assessment),
+              onPressed: () async {
+                try {
+                  final response = await ref
+                      .read(speakingPracticeProvider.notifier)
+                      .startLevelAssessment();
+                  ref
+                      .read(speakingPracticeProvider.notifier)
+                      .addAIMessage(response);
+                  await _speakResponse(response);
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('레벨 측정 중 오류 발생: $e')),
+                    );
+                  }
+                }
+              },
+              tooltip: '영어 레벨 측정',
+            ),
+        ],
       ),
       body: Stack(
         children: [
@@ -215,7 +251,7 @@ class _SpeakingPracticeScreenState
                     ),
                     const SizedBox(height: 12),
                     SizedBox(
-                      height: 120,
+                      height: 160,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
                         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -229,9 +265,25 @@ class _SpeakingPracticeScreenState
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: InkWell(
-                                onTap: () {
+                                onTap: () async {
                                   setState(() => _text = _suggestions[index]);
-                                  _stopListening();
+                                  // 추천 예문을 대화 기록에 추가
+                                  ref
+                                      .read(speakingPracticeProvider.notifier)
+                                      .addUserMessage(_suggestions[index]);
+                                  // AI 응답 받기
+                                  final response = await ref
+                                      .read(speakingPracticeProvider.notifier)
+                                      .getConversationResponse(
+                                          _suggestions[index], _currentLevel);
+                                  // AI 응답을 대화 기록에 추가
+                                  ref
+                                      .read(speakingPracticeProvider.notifier)
+                                      .addAIMessage(response);
+                                  // TTS로 응답 재생
+                                  await _speakResponse(response);
+                                  // 추천 문장 업데이트
+                                  await _updateSuggestions();
                                 },
                                 borderRadius: BorderRadius.circular(12),
                                 child: Container(
@@ -249,6 +301,8 @@ class _SpeakingPracticeScreenState
                                       Text(
                                         _suggestions[index],
                                         textAlign: TextAlign.center,
+                                        maxLines: 5,
+                                        overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           color: Colors.blue[900],
                                           fontSize: 14,
@@ -337,14 +391,36 @@ class _SpeakingPracticeScreenState
                                         ),
                                       ],
                                     ),
-                                    child: Text(
-                                      message['text'] ?? '',
-                                      style: TextStyle(
-                                        color: isUser
-                                            ? Colors.blue[900]
-                                            : Colors.black87,
-                                        fontSize: 15,
-                                      ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            message['text'] ?? '',
+                                            style: TextStyle(
+                                              color: isUser
+                                                  ? Colors.blue[900]
+                                                  : Colors.black87,
+                                              fontSize: 15,
+                                            ),
+                                          ),
+                                        ),
+                                        if (!isUser) ...[
+                                          const SizedBox(width: 8),
+                                          IconButton(
+                                            icon: Icon(
+                                              Icons.volume_up,
+                                              size: 20,
+                                              color: Colors.blue[700],
+                                            ),
+                                            onPressed: () => _speakResponse(
+                                                message['text'] ?? ''),
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(),
+                                            tooltip: '다시 듣기',
+                                          ),
+                                        ],
+                                      ],
                                     ),
                                   ),
                                 ),
@@ -594,6 +670,26 @@ class _SpeakingPracticeScreenState
                 ),
               ),
             ),
+          // 레벨 측정 중 상태 표시
+          if (state.isLevelAssessment)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                color: Colors.blue.withOpacity(0.1),
+                child: Center(
+                  child: Text(
+                    '영어 레벨 측정 중 (${state.assessmentQuestionCount + 1}/3)',
+                    style: TextStyle(
+                      color: Colors.blue[700],
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -612,7 +708,6 @@ class _SpeakingPracticeScreenState
     }
 
     final state = ref.read(speakingPracticeProvider);
-    // API 응답이나 TTS 재생 중에는 음성 인식 시작하지 않음
     if (state.isSpeaking || state.isProcessing) {
       debugPrint('ℹ️ [STT] Waiting for AI response or TTS to complete');
       return;
@@ -638,24 +733,58 @@ class _SpeakingPracticeScreenState
       setState(() {
         _isListening = true;
         _isInitializing = false;
-        _text = ''; // 새로운 대화 시작 시 텍스트 초기화
+        _text = '';
       });
-      _speech.listen(
-        onResult: (result) {
-          debugPrint('🎤 [STT] Partial result: ${result.recognizedWords}');
-          setState(() {
-            _text = result.recognizedWords;
-          });
 
-          // 실시간으로 Provider를 통해 상태 업데이트
-          ref.read(speakingPracticeProvider.notifier).updateCurrentText(_text);
+      final locales = await _speech.locales();
+      String? localeId;
+
+      if (locales.isNotEmpty) {
+        final enLocale = locales.firstWhere(
+          (locale) => locale.name.toLowerCase().contains('en_us'),
+          orElse: () => locales.firstWhere(
+            (locale) => locale.name.toLowerCase().contains('en_gb'),
+            orElse: () => locales.firstWhere(
+              (locale) => locale.name.toLowerCase().contains('en'),
+              orElse: () => locales.first,
+            ),
+          ),
+        );
+        localeId = enLocale.localeId;
+        debugPrint('🎤 [STT] Using locale: ${enLocale.name}');
+      }
+
+      _speech.listen(
+        onResult: (result) async {
+          debugPrint('🎤 [STT] Partial result: ${result.recognizedWords}');
+          // 실시간으로 한국어를 영어로 변환
+          try {
+            final openAIService = ref.read(openAIServiceProvider);
+            final englishText =
+                await openAIService.convertToEnglish(result.recognizedWords);
+            setState(() {
+              _text = englishText;
+            });
+            ref
+                .read(speakingPracticeProvider.notifier)
+                .updateCurrentText(englishText);
+          } catch (e) {
+            debugPrint('❌ [Error] Failed to convert text: $e');
+            setState(() {
+              _text = result.recognizedWords;
+            });
+            ref
+                .read(speakingPracticeProvider.notifier)
+                .updateCurrentText(result.recognizedWords);
+          }
         },
         listenFor: const Duration(seconds: 30),
-        pauseFor: const Duration(seconds: 2),
+        pauseFor: const Duration(seconds: 5),
         partialResults: true,
         onDevice: true,
         cancelOnError: true,
-        listenMode: stt.ListenMode.confirmation,
+        listenMode: stt.ListenMode.dictation,
+        localeId: localeId,
       );
     } else {
       debugPrint('❌ [STT] Failed to initialize speech recognition');
@@ -669,47 +798,94 @@ class _SpeakingPracticeScreenState
   }
 
   Future<void> _stopListening() async {
-    if (_isListening) {
-      debugPrint('🎤 [STT] Stopping speech recognition...');
-      await _speech.stop();
-      setState(() => _isListening = false);
+    if (!_isListening) return;
 
-      // 텍스트가 너무 짧으면 대화로 처리하지 않음
-      if (_text.isEmpty || _text.length < 3) {
-        debugPrint('ℹ️ [STT] Text too short, ignoring');
-        _showFeedback('음성이 너무 짧습니다. 좀 더 길게 말씀해 보세요.');
-        return;
+    setState(() {
+      _isListening = false;
+      _isInitializing = false;
+    });
+
+    await _speech.stop();
+    debugPrint('🎤 [STT] Stopped listening');
+
+    if (_text.isEmpty || _text.length < 3) {
+      setState(() => _text = '');
+      return;
+    }
+
+    try {
+      setState(() => _isSpeaking = true);
+
+      // 음성 인식 결과를 영어로 변환
+      final openAIService = ref.read(openAIServiceProvider);
+      final englishText = await openAIService.convertToEnglish(_text);
+      setState(() => _text = englishText);
+
+      // 사용자 메시지 추가
+      ref.read(speakingPracticeProvider.notifier).addUserMessage(englishText);
+
+      String response;
+      final state = ref.read(speakingPracticeProvider);
+
+      if (state.isLevelAssessment) {
+        print('🎯 [Screen] Processing level assessment response');
+        response = await ref
+            .read(speakingPracticeProvider.notifier)
+            .continueLevelAssessment(_text);
+
+        // 레벨 측정이 완료된 경우 (마지막 질문)
+        if (state.assessmentQuestionCount >= 2) {
+          print('🎯 [Screen] Final question answered');
+          print('🎯 [Screen] Response: $response');
+
+          // 레벨과 피드백 파싱
+          final levelMatch =
+              RegExp(r'Level:\s*([A-C][1-2])').firstMatch(response);
+          if (levelMatch != null) {
+            final level = levelMatch.group(1);
+            // 피드백은 "Level: X" 이후의 모든 텍스트
+            final feedback =
+                response.substring(response.indexOf('\n') + 1).trim();
+
+            if (level != null) {
+              print('🎯 [Screen] Level found: $level');
+              print('🎯 [Screen] Feedback: $feedback');
+
+              // AI 응답을 대화 기록에 추가
+              ref
+                  .read(speakingPracticeProvider.notifier)
+                  .addAIMessage(response);
+
+              // 레벨 저장
+              await _saveLevel(level);
+              print('🎯 [Screen] Level saved');
+
+              // TTS로 레벨과 피드백만 재생
+              await _speakResponse('Your English level is $level. $feedback');
+              setState(() => _isSpeaking = false);
+              return;
+            }
+          } else {
+            print('❌ [Screen] Failed to parse level from response');
+          }
+        }
+      } else {
+        response = await ref
+            .read(speakingPracticeProvider.notifier)
+            .getConversationResponse(_text, _currentLevel);
+        await _updateSuggestions();
       }
 
-      try {
-        // 사용자 발화를 대화 기록에 추가
-        ref.read(speakingPracticeProvider.notifier).addUserMessage(_text);
-
-        // API 응답 대기 중 상태 표시
-        setState(() => _isSpeaking = true);
-
-        final response = await ref
-            .read(speakingPracticeProvider.notifier)
-            .getConversationResponse(_text);
-
-        debugPrint('🤖 [AI] Response: $response');
-
-        // AI 응답을 대화 기록에 추가
-        ref.read(speakingPracticeProvider.notifier).addAIMessage(response);
-
-        setState(() {});
-        _scrollToBottom();
-
-        // TTS로 응답 읽어주기
-        await _speakResponse(response);
-      } catch (e) {
-        debugPrint('❌ [Error] API Error: $e');
-        setState(() => _isSpeaking = false);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('API 오류: $e')),
-          );
-        }
+      ref.read(speakingPracticeProvider.notifier).addAIMessage(response);
+      setState(() {});
+      _scrollToBottom();
+      await _speakResponse(response);
+    } catch (e) {
+      setState(() => _isSpeaking = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('API 오류: $e')),
+        );
       }
     }
   }
@@ -734,6 +910,61 @@ class _SpeakingPracticeScreenState
         );
       }
     });
+  }
+
+  // 저장된 레벨 불러오기
+  Future<void> _loadSavedLevel() async {
+    // TODO: 백엔드 연동 시 사용자 레벨 정보를 서버에서 가져오도록 수정
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _currentLevel = prefs.getString('user_level') ?? 'A1';
+    });
+  }
+
+  // 레벨 저장하기
+  Future<void> _saveLevel(String level) async {
+    // TODO: 백엔드 연동 시 사용자 레벨 정보를 서버에 저장하도록 수정
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_level', level);
+    setState(() {
+      _currentLevel = level;
+    });
+  }
+
+  // 레벨에 따른 대화 난이도 조정
+  String _adjustConversationForLevel(String text) {
+    // TODO: 백엔드 연동 시 AI 모델에 레벨 정보를 전달하여 응답 생성
+    return text;
+  }
+
+  // 추천 문장 업데이트
+  Future<void> _updateSuggestions() async {
+    try {
+      final state = ref.read(speakingPracticeProvider);
+      if (state.conversationHistory.isEmpty) {
+        setState(() {
+          _suggestions = List.from(_initialSuggestions);
+        });
+        return;
+      }
+
+      // 마지막 대화 내용을 기반으로 새로운 추천 문장 생성
+      final lastMessage = state.conversationHistory.last['text'] ?? '';
+      final response = await ref
+          .read(speakingPracticeProvider.notifier)
+          .getConversationSuggestions(lastMessage, _currentLevel);
+
+      setState(() {
+        _suggestions =
+            response.split('\n').where((s) => s.isNotEmpty).take(10).toList();
+      });
+    } catch (e) {
+      debugPrint('❌ [Error] Failed to update suggestions: $e');
+      // 에러 발생 시 초기 추천 문장 유지
+      setState(() {
+        _suggestions = List.from(_initialSuggestions);
+      });
+    }
   }
 
   @override
