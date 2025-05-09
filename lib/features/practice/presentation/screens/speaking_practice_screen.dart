@@ -10,6 +10,9 @@ import '../../../../core/services/web_permission_service.dart';
 import '../../domain/services/speech_service.dart';
 import '../providers/speaking_practice_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../widgets/chat_message.dart';
+import '../widgets/mic_button.dart';
+import '../widgets/suggestion_list.dart';
 
 class SpeakingPracticeScreen extends ConsumerStatefulWidget {
   const SpeakingPracticeScreen({super.key});
@@ -36,6 +39,9 @@ class _SpeakingPracticeScreenState
   final ScrollController _scrollController = ScrollController();
   String _currentLevel = 'A1'; // 기본 레벨 설정
   List<String> _suggestions = []; // 동적 추천 문장을 위한 리스트
+  bool _isTranslationEnabled = false; // 번역 활성화 상태
+  Map<String, String> _translatedMessages = {}; // 메시지별 번역 저장
+  Map<String, bool> _translationStates = {};
 
   // 초기 추천 문장
   final List<String> _initialSuggestions = [
@@ -243,102 +249,23 @@ class _SpeakingPracticeScreenState
         children: [
           Column(
             children: [
-              // 추천 예문 섹션
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                color: Colors.blue[50],
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          const Text(
-                            '대화 시작하기',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Icon(Icons.arrow_forward_ios,
-                              size: 16, color: Colors.blue[700]),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 160,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        itemCount: _suggestions.length,
-                        itemBuilder: (context, index) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: Card(
-                              elevation: 2,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: InkWell(
-                                onTap: () async {
-                                  setState(() => _text = _suggestions[index]);
-                                  // 추천 예문을 대화 기록에 추가
-                                  ref
-                                      .read(speakingPracticeProvider.notifier)
-                                      .addUserMessage(_suggestions[index]);
-                                  // AI 응답 받기
-                                  final response = await ref
-                                      .read(speakingPracticeProvider.notifier)
-                                      .getConversationResponse(
-                                          _suggestions[index], _currentLevel);
-                                  // AI 응답을 대화 기록에 추가
-                                  ref
-                                      .read(speakingPracticeProvider.notifier)
-                                      .addAIMessage(response);
-                                  // TTS로 응답 재생
-                                  await _speakResponse(response);
-                                  // 추천 문장 업데이트
-                                  await _updateSuggestions();
-                                },
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  width: 200,
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.chat_bubble_outline,
-                                        color: Colors.blue[700],
-                                        size: 24,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        _suggestions[index],
-                                        textAlign: TextAlign.center,
-                                        maxLines: 5,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          color: Colors.blue[900],
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
+              SuggestionList(
+                suggestions: _suggestions,
+                onSuggestionSelected: (suggestion) async {
+                  setState(() => _text = suggestion);
+                  ref
+                      .read(speakingPracticeProvider.notifier)
+                      .addUserMessage(suggestion);
+                  final response = await ref
+                      .read(speakingPracticeProvider.notifier)
+                      .getConversationResponse(suggestion, _currentLevel);
+                  ref
+                      .read(speakingPracticeProvider.notifier)
+                      .addAIMessage(response);
+                  await _speakResponse(response);
+                  await _updateSuggestions();
+                },
               ),
-              // 대화 기록 섹션
               Expanded(
                 child: Container(
                   color: Colors.grey[100],
@@ -346,8 +273,7 @@ class _SpeakingPracticeScreenState
                     children: [
                       ListView.builder(
                         controller: _scrollController,
-                        padding: const EdgeInsets.fromLTRB(
-                            16, 8, 16, 80), // 하단 여백 추가
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
                         itemCount: state.conversationHistory.length,
                         itemBuilder: (context, index) {
                           final message = state.conversationHistory[index];
@@ -355,113 +281,33 @@ class _SpeakingPracticeScreenState
                           final showAvatar = index == 0 ||
                               state.conversationHistory[index - 1]['role'] !=
                                   message['role'];
+                          final messageText = message['text'] ?? '';
+                          final isTranslated =
+                              _translationStates[messageText] ?? false;
 
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Row(
-                              mainAxisAlignment: isUser
-                                  ? MainAxisAlignment.end
-                                  : MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                if (!isUser && showAvatar) ...[
-                                  CircleAvatar(
-                                    radius: 16,
-                                    backgroundColor: Colors.blue[100],
-                                    child: const Icon(
-                                      Icons.smart_toy,
-                                      color: Colors.blue,
-                                      size: 20,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                ] else if (!isUser) ...[
-                                  const SizedBox(width: 40),
-                                ],
-                                Flexible(
-                                  child: Container(
-                                    constraints: BoxConstraints(
-                                      maxWidth:
-                                          MediaQuery.of(context).size.width *
-                                              0.7,
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 10,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: isUser
-                                          ? Colors.blue[100]
-                                          : Colors.white,
-                                      borderRadius: BorderRadius.only(
-                                        topLeft: const Radius.circular(16),
-                                        topRight: const Radius.circular(16),
-                                        bottomLeft:
-                                            Radius.circular(isUser ? 16 : 4),
-                                        bottomRight:
-                                            Radius.circular(isUser ? 4 : 16),
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.05),
-                                          blurRadius: 2,
-                                          offset: const Offset(0, 1),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            message['text'] ?? '',
-                                            style: TextStyle(
-                                              color: isUser
-                                                  ? Colors.blue[900]
-                                                  : Colors.black87,
-                                              fontSize: 15,
-                                            ),
-                                          ),
-                                        ),
-                                        if (!isUser) ...[
-                                          const SizedBox(width: 8),
-                                          IconButton(
-                                            icon: Icon(
-                                              Icons.volume_up,
-                                              size: 20,
-                                              color: Colors.blue[700],
-                                            ),
-                                            onPressed: () => _speakResponse(
-                                                message['text'] ?? ''),
-                                            padding: EdgeInsets.zero,
-                                            constraints: const BoxConstraints(),
-                                            tooltip: '다시 듣기',
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                if (isUser && showAvatar) ...[
-                                  const SizedBox(width: 8),
-                                  CircleAvatar(
-                                    radius: 16,
-                                    backgroundColor: Colors.blue[100],
-                                    child: const Icon(
-                                      Icons.person,
-                                      color: Colors.blue,
-                                      size: 20,
-                                    ),
-                                  ),
-                                ] else if (isUser) ...[
-                                  const SizedBox(width: 40),
-                                ],
-                              ],
-                            ),
+                          return ChatMessage(
+                            message: message,
+                            isUser: isUser,
+                            showAvatar: showAvatar,
+                            onSpeak: () => _speakResponse(messageText),
+                            onTranslate: () async {
+                              setState(() {
+                                _translationStates[messageText] = !isTranslated;
+                              });
+                              if (!isTranslated) {
+                                final translatedText =
+                                    await _translateMessage(messageText);
+                                setState(() {
+                                  _translatedMessages[messageText] =
+                                      translatedText;
+                                });
+                              }
+                            },
+                            isTranslated: isTranslated,
+                            translatedText: _translatedMessages[messageText],
                           );
                         },
                       ),
-                      // 실시간 STT 텍스트 표시
                       if (state.text.isNotEmpty)
                         Positioned(
                           bottom: 16,
@@ -502,7 +348,6 @@ class _SpeakingPracticeScreenState
                             ),
                           ),
                         ),
-                      // 처리 중 상태 표시
                       if (state.isProcessing || state.isSpeaking)
                         Positioned(
                           bottom: state.text.isNotEmpty ? 80 : 16,
@@ -549,102 +394,17 @@ class _SpeakingPracticeScreenState
               ),
             ],
           ),
-          // 중앙 마이크 버튼
           Positioned(
             bottom: 15,
             right: 15,
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  GestureDetector(
-                    onTapDown: (_) => _startListening(),
-                    onTapUp: (_) => _stopListening(),
-                    onTapCancel: () => _stopListening(),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: _isListening ? 72 : 56,
-                      height: _isListening ? 72 : 56,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _isListening ? Colors.red : Colors.blue,
-                        boxShadow: _isListening
-                            ? [
-                                BoxShadow(
-                                  color: Colors.red.withOpacity(0.3),
-                                  blurRadius: 12,
-                                  spreadRadius: 4,
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: Center(
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 200),
-                          child: _isListening
-                              ? Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.mic,
-                                      color: Colors.white,
-                                      size: 28,
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '말하는 중...',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : Icon(
-                                  Icons.mic_none,
-                                  color: Colors.white,
-                                  size: 28,
-                                ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (_isInitializing)
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.black.withOpacity(0.3),
-                      ),
-                      child: const Center(
-                        child: SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+            child: MicButton(
+              isListening: _isListening,
+              isInitializing: _isInitializing,
+              onTapDown: _startListening,
+              onTapUp: _stopListening,
+              onTapCancel: _stopListening,
             ),
           ),
-          // 토스트 메시지
           if (_showToast)
             Center(
               child: AnimatedOpacity(
@@ -688,7 +448,6 @@ class _SpeakingPracticeScreenState
                 ),
               ),
             ),
-          // 레벨 측정 중 상태 표시
           if (state.isLevelAssessment)
             Positioned(
               top: 0,
@@ -710,6 +469,44 @@ class _SpeakingPracticeScreenState
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMessageContent(Map<String, String> message, bool isUser) {
+    final messageText = message['text'] ?? '';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Expanded(
+              child: Text(
+                messageText,
+                style: TextStyle(
+                  color: isUser ? Colors.blue[900] : Colors.black87,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+            if (!isUser) ...[
+              const SizedBox(width: 8),
+              IconButton(
+                icon: Icon(
+                  Icons.volume_up,
+                  size: 20,
+                  color: Colors.blue[700],
+                ),
+                onPressed: () => _speakResponse(messageText),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                tooltip: '다시 듣기',
+              ),
+            ],
+          ],
+        ),
+      ],
     );
   }
 
@@ -846,45 +643,28 @@ class _SpeakingPracticeScreenState
       final state = ref.read(speakingPracticeProvider);
 
       if (state.isLevelAssessment) {
-        print('🎯 [Screen] Processing level assessment response');
         response = await ref
             .read(speakingPracticeProvider.notifier)
             .continueLevelAssessment(_text);
 
-        // 레벨 측정이 완료된 경우 (마지막 질문)
         if (state.assessmentQuestionCount >= 2) {
-          print('🎯 [Screen] Final question answered');
-          print('🎯 [Screen] Response: $response');
-
-          // 레벨과 피드백 파싱
           final levelMatch =
               RegExp(r'Level:\s*([A-C][1-2])').firstMatch(response);
           if (levelMatch != null) {
             final level = levelMatch.group(1);
-            // 피드백은 "Level: X" 이후의 모든 텍스트
             final feedback =
                 response.substring(response.indexOf('\n') + 1).trim();
 
             if (level != null) {
-              print('🎯 [Screen] Level found: $level');
-              print('🎯 [Screen] Feedback: $feedback');
-
-              // AI 응답을 대화 기록에 추가
               ref
                   .read(speakingPracticeProvider.notifier)
                   .addAIMessage(response);
 
-              // 레벨 저장
               await _saveLevel(level);
-              print('🎯 [Screen] Level saved');
-
-              // TTS로 레벨과 피드백만 재생
               await _speakResponse('Your English level is $level. $feedback');
               setState(() => _isSpeaking = false);
               return;
             }
-          } else {
-            print('❌ [Screen] Failed to parse level from response');
           }
         }
       } else {
@@ -1077,6 +857,16 @@ class _SpeakingPracticeScreenState
         );
       },
     );
+  }
+
+  Future<String> _translateMessage(String text) async {
+    try {
+      final openAIService = ref.read(openAIServiceProvider);
+      return await openAIService.translateToKorean(text);
+    } catch (e) {
+      debugPrint('❌ [Error] Failed to translate message: $e');
+      return '번역 중 오류가 발생했습니다.';
+    }
   }
 
   @override

@@ -3,12 +3,15 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 class OpenAIService {
   final String apiKey;
   final http.Client _client;
 
-  OpenAIService({required this.apiKey}) : _client = http.Client();
+  OpenAIService({required this.apiKey}) : _client = http.Client() {
+    OpenAI.apiKey = apiKey;
+  }
 
   Future<String> convertToEnglish(String text) async {
     try {
@@ -122,6 +125,33 @@ Based on the student's answers, determine their English level (A1, A2, B1, B2, C
 Format your response exactly like this:
 Level: [level]
 Feedback: [one sentence feedback]''');
+    }
+  }
+
+  Future<String> translateToKorean(String text) async {
+    try {
+      final response = await OpenAI.instance.chat.create(
+        model: 'gpt-3.5-turbo',
+        messages: [
+          OpenAIChatCompletionChoiceMessageModel(
+            content: [
+              OpenAIChatCompletionChoiceMessageContentItemModel.text(
+                'Translate the following English text to Korean. Only return the translation without any explanation or additional text:\n\n$text',
+              ),
+            ],
+            role: OpenAIChatMessageRole.user,
+          ),
+        ],
+      );
+
+      final content = response.choices.first.message.content;
+      if (content == null || content.isEmpty) {
+        return text;
+      }
+      return content.first.text ?? text;
+    } catch (e) {
+      debugPrint('❌ [OpenAI Error] Translation failed: $e');
+      rethrow;
     }
   }
 }
