@@ -26,7 +26,6 @@ wheels/
 .installed.cfg
 *.egg
 venv/
-.env
 
 # Flutter/Dart
 .dart_tool/

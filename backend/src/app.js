@@ -2,10 +2,13 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const helmet = require('helmet');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 const connectDB = require('./config/database');
 const authRoutes = require('./routes/auth');
+const learningMaterialRoutes = require('./routes/learningMaterial');
+const openaiRoutes = require('./routes/openai');
 
 // Express 앱 생성
 const app = express();
@@ -18,6 +21,8 @@ app.use(express.json());
 
 // 라우트
 app.use('/api/auth', authRoutes);
+app.use('/api/materials', learningMaterialRoutes);
+app.use('/api/openai', openaiRoutes);
 
 // 에러 핸들링
 app.use((err, req, res, next) => {
@@ -26,7 +31,7 @@ app.use((err, req, res, next) => {
 });
 
 // 서버 시작
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 const start = async () => {
   try {
