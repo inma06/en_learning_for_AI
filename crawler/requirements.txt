@@ -1,0 +1,10 @@
+beautifulsoup4==4.12.2
+requests==2.31.0
+pymongo==4.5.0
+python-dotenv==1.0.0
+schedule==1.2.0
+lxml==4.9.3
+aiohttp==3.8.5
+pytest==7.4.2
+black==23.9.1
+flake8==6.1.0 

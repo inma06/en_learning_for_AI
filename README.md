@@ -1,189 +1,197 @@
-# AI 기반 영어 학습 애플리케이션
+# AI 기반 영어 학습 플랫폼
 
-Flutter를 사용한 AI 기반 영어 학습 애플리케이션입니다.
+뉴스 헤드라인을 활용한 AI 기반 영어 학습 플랫폼입니다. CNN, BBC, Reuters의 최신 뉴스를 기반으로 영어 학습 자료를 자동으로 생성합니다.
+
+## 프로젝트 구조
+
+```
+.
+├── backend/           # Express.js 기반 API 서버
+├── frontend/
+│   ├── app/          # Flutter 기반 모바일 앱 (iOS, Android)
+│   └── web-admin/    # Next.js 기반 관리자 콘솔
+├── crawler/          # Python 기반 뉴스 헤드라인 스크래퍼
+└── docker/           # Docker 설정 파일
+```
+
+## 기술 스택
+
+### 백엔드
+- **Express.js**: API 서버
+- **MongoDB**: 데이터베이스
+- **OpenAI API**: 영어 학습 자료 생성
+
+### 프론트엔드
+- **모바일 앱**: Flutter
+  - 상태 관리: Riverpod
+  - 데이터 모델링: Freezed
+  - HTTP 통신: Dio + Retrofit
+  - 로컬 스토리지: Hive, SharedPreferences
+- **관리자 콘솔**: Next.js
+  - UI 프레임워크: Chakra UI
+  - 상태 관리: React Query
+  - HTTP 클라이언트: Axios
+
+### 크롤러
+- **Python 3.10**: 메인 언어
+- **BeautifulSoup4**: 웹 스크래핑
+- **MongoDB**: 데이터 저장
 
 ## 주요 기능
 
+### 모바일 앱
 - 소셜 로그인 (Google, Apple)
 - 자동 로그인
 - 학습 화면
 - 연습 화면
 - 프로필 관리
 
-## 프로젝트 구조
+### 관리자 콘솔
+- 사용자 관리
+- 학습 자료 관리
+- 통계 및 분석
+- 시스템 설정
 
-Clean Architecture 패턴을 적용하여 다음과 같은 구조로 구성되어 있습니다:
+### 크롤러
+- CNN, BBC, Reuters 뉴스 스크래핑
+- 헤드라인 데이터 정제
+- MongoDB 저장
 
-```
-lib/
-├── core/
-│   ├── config/      # App configurations
-│   ├── error/       # Error handling
-│   ├── network/     # Network configurations
-│   ├── storage/     # Local storage setup
-│   └── utils/       # Utility functions
-│
-├── features/
-│   ├── auth/        # Authentication
-│   ├── learning/    # Learning
-│   ├── profile/     # User profile
-│   └── settings/    # App settings
-│   └── Each feature follows Clean Architecture:
-│       ├── data/
-│       │   ├── datasources/  # Data sources
-│       │   ├── models/       # Data models
-│       │   └── repositories/ # Repository implementations
-│       ├── domain/
-│       │   ├── entities/     # Business entities
-│       │   ├── repositories/ # Repository interfaces
-│       │   └── usecases/     # Use cases
-│       └── presentation/
-│           ├── providers/    # State management
-│           ├── screens/      # Screens
-│           └── widgets/      # Widgets
-```
+## 개발 환경 설정
 
-## 사용된 주요 라이브러리
+### 필수 요구사항
+- Node.js (LTS 버전)
+- Python 3.10
+- Flutter (stable 채널)
+- Docker와 Docker Compose
+- MongoDB
 
-### 상태 관리
-- **flutter_riverpod**: 상태 관리 라이브러리
-  - Provider보다 강력한 기능과 타입 안정성 제공
-  - 의존성 주입 용이
-  - 테스트 용이성
-  - 코드 재사용성과 유지보수성 향상
+### 로컬 개발 환경 설정
 
-### 데이터 모델링
-- **freezed**: 불변 데이터 클래스 생성
-  - 보일러플레이트 코드 감소
-  - 타입 안정성 강화
-  - copyWith, ==, toString 등 자동 생성
-
-### 로컬 스토리지
-- **hive**: NoSQL 데이터베이스
-  - 빠른 데이터 접근
-  - 사용자 정보 저장
-- **shared_preferences**: 키-값 저장소
-  - 간단한 데이터 저장
-  - 토큰 관리
-
-### HTTP 통신 (추가 예정)
-- **dio**: HTTP 클라이언트
-  - HTTP 요청 처리
-  - 인터셉터, 요청/응답 변환
-  - 에러 처리
-- **retrofit**: API 인터페이스 정의
-  - API 엔드포인트를 인터페이스로 정의
-  - 자동 구현체 생성
-  - 타입 안정성과 코드 재사용성 향상
-
-## Dio와 Retrofit을 함께 사용하는 이유
-
-1. **코드 품질**
-   - Retrofit이 API 인터페이스를 깔끔하게 정의
-   - 반복적인 HTTP 요청 코드 제거
-   - 타입 안정성 보장
-
-2. **유지보수성**
-   - API 변경 시 인터페이스만 수정
-   - 구현체 자동 생성
-   - 테스트 작성 용이
-
-3. **확장성**
-   - 새로운 API 엔드포인트 추가 용이
-   - 인터셉터, 에러 처리 중앙 관리
-
-4. **생산성**
-   - 보일러플레이트 코드 감소
-   - API 문서 기반 인터페이스 정의
-   - 실수 가능성 감소
-
-## 시작하기
-
-1. Flutter 개발 환경 설정
-2. 의존성 설치
+1. 저장소 클론:
    ```bash
-   flutter pub get
+   git clone [repository-url]
+   cd language_learning_app
    ```
-3. 앱 실행
+
+2. 환경 변수 설정:
    ```bash
+   # 환경 변수 파일 복사
+   cp backend/.env.example backend/.env
+   cp frontend/app/.env.example frontend/app/.env
+   cp frontend/web-admin/.env.example frontend/web-admin/.env
+   ```
+
+3. 개발 환경 실행:
+   ```bash
+   docker-compose up -d
+   ```
+
+4. 각 서비스 실행:
+
+   **백엔드**
+   ```bash
+   cd backend
+   npm install
+   npm run dev
+   ```
+
+   **모바일 앱**
+   ```bash
+   cd frontend/app
+   flutter pub get
    flutter run
    ```
 
+   **관리자 콘솔**
+   ```bash
+   cd frontend/web-admin
+   npm install
+   npm run dev
+   ```
+
+   **크롤러**
+   ```bash
+   cd crawler
+   python -m venv venv
+   source venv/bin/activate  # Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   python main.py
+   ```
+
+## Docker 개발 환경
+
+프로젝트는 Docker를 통한 개발 환경을 제공합니다. 전체 스택을 실행하려면:
+
+```bash
+docker-compose up -d
+```
+
+## 아키텍처
+
+### 모바일 앱 (Clean Architecture)
+```
+lib/
+├── core/              # 핵심 기능
+│   ├── config/       # 앱 설정
+│   ├── error/        # 에러 처리
+│   ├── network/      # 네트워크 설정
+│   ├── storage/      # 로컬 저장소
+│   └── utils/        # 유틸리티
+│
+├── features/         # 기능별 모듈
+│   ├── auth/         # 인증
+│   ├── learning/     # 학습
+│   ├── profile/      # 프로필
+│   └── settings/     # 설정
+│
+└── 각 기능은 Clean Architecture 패턴을 따름:
+    ├── data/         # 데이터 계층
+    ├── domain/       # 도메인 계층
+    └── presentation/ # 프레젠테이션 계층
+```
+
 ## 개발 가이드라인
 
-### 코드 생성
-프로젝트에서 사용하는 코드 생성 도구들:
-- Freezed: Immutable models
-- JSON Serializable: JSON parsing
-- Riverpod Generator: State management
-- Retrofit Generator: API clients
+### 코드 스타일
+- Flutter: `flutter format` 사용
+- Python: `black` 포맷터 사용
+- JavaScript/TypeScript: ESLint + Prettier 사용
 
-### 상태 관리
-- Riverpod를 사용한 상태 관리
-- 의존성 주입을 위한 프로바이더 패턴 사용
-- 복잡한 상태 관리를 위한 StateNotifier 활용
-
-### 아키텍처
-프로젝트는 Clean Architecture 원칙을 따릅니다:
-- **데이터 계층**: 저장소 구현, 데이터 모델, 데이터 소스
-- **도메인 계층**: 비즈니스 로직, 엔티티, 저장소 인터페이스
-- **프레젠테이션 계층**: UI 컴포넌트와 상태 관리
-
-### 추천 IDE 확장 프로그램
-- Flutter
-- Dart
-- Flutter Widget Snippets
-- Awesome Flutter Snippets
-- Flutter Intl
-- Error Lens
-- GitLens
-- Better Comments
-
-## 기여 방법
-[기여 가이드라인 추가 예정]
+### Git 커밋 메시지
+- feat: 새로운 기능
+- fix: 버그 수정
+- docs: 문서 수정
+- style: 코드 포맷팅
+- refactor: 코드 리팩토링
+- test: 테스트 코드
+- chore: 빌드 업무 수정
 
 ## 라이선스
+
 [라이선스 정보 추가 예정]
+
+## 기여 방법
+
+1. 이슈 생성 또는 기존 이슈 확인
+2. 새로운 브랜치 생성
+3. 변경사항 커밋
+4. Pull Request 생성
 
 ## 향후 개발 계획
 
-### 음성 인식 기능 개선
-- [ ] 음성 인식 정확도 향상
-  - 노이즈 캔슬링 기능 추가
-  - 음성 인식 언어 설정 옵션 추가
-- [ ] 음성 인식 UI/UX 추가 개선
-  - 음성 파형 시각화 추가
-  - 음성 인식 중 진행 상태 표시 개선
-  - 음성 인식 실패 시 재시도 UI 개선
+### 음성 인식 기능
+- 음성 인식 정확도 향상
+- 음성 파형 시각화
+- 발음 평가 시스템
 
-### 대화 기능 개선
-- [ ] 대화 컨텍스트 관리
-  - 이전 대화 내용 기억 및 참조
-  - 대화 주제 유지 및 전환
-- [ ] 대화 히스토리 관리
-  - 대화 내용 저장 및 불러오기
-  - 대화 내용 공유 기능
-- [ ] 대화 분석 기능
-  - 발음 평가 및 피드백
-  - 문법 오류 교정
-  - 어휘 사용 분석
-
-### 학습 기능 추가
-- [ ] 개인화된 학습 경로
-  - 사용자 수준에 맞는 난이도 조정
-  - 학습 진행도 추적
-- [ ] 학습 통계 및 리포트
-  - 일일/주간/월간 학습 현황
-  - 취약점 분석 및 개선 제안
-- [ ] 학습 게이미피케이션
-  - 학습 스트릭 시스템
-  - 업적 및 뱃지 시스템
-  - 학습 보상 시스템
+### 학습 기능
+- 개인화된 학습 경로
+- 학습 통계 및 리포트
+- 게이미피케이션 요소
 
 ### UI/UX 개선
-- [ ] 다크 모드 지원
-- [ ] 다국어 지원
-- [ ] 접근성 개선
-- [ ] 애니메이션 및 전환 효과 개선
-- [ ] 반응형 디자인 개선
+- 다크 모드
+- 다국어 지원
+- 접근성 개선
 
