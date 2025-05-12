@@ -4,6 +4,7 @@ import '../providers/home_provider.dart';
 import 'learn_screen.dart';
 import 'practice_screen.dart';
 import 'profile_screen.dart';
+import '../../../news/presentation/screens/news_screen.dart';
 
 class MainScreen extends ConsumerWidget {
   const MainScreen({super.key});
@@ -18,6 +19,7 @@ class MainScreen extends ConsumerWidget {
         children: const [
           PracticeScreen(),
           LearnScreen(),
+          NewsScreen(),
           ProfileScreen(),
         ],
       ),
@@ -34,6 +36,10 @@ class MainScreen extends ConsumerWidget {
           NavigationDestination(
             icon: Icon(Icons.school),
             label: '학습',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.article_rounded),
+            label: '뉴스',
           ),
           NavigationDestination(
             icon: Icon(Icons.person),

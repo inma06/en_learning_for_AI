@@ -24,6 +24,7 @@ import '../../features/splash/presentation/screens/permission_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/home/presentation/screens/main_screen.dart';
 import '../../features/practice/presentation/screens/speaking_practice_screen.dart';
+import '../../features/vocabulary/presentation/screens/vocabulary_practice_screen.dart';
 import 'app_routes.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
@@ -81,11 +82,7 @@ final routerConfig = GoRouter(
     ),
     GoRoute(
       path: AppRoutes.vocabularyPractice,
-      builder: (context, state) => const Scaffold(
-        body: Center(
-          child: Text('단어 연습 화면 (개발 중)'),
-        ),
-      ),
+      builder: (context, state) => const VocabularyPracticeScreen(),
     ),
   ],
   // 에러 페이지 처리

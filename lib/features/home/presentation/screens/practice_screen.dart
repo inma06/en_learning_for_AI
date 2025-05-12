@@ -26,12 +26,21 @@ class PracticeScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           _buildPracticeTypeCard(
+            title: '단어 연습',
+            description: '효과적인 단어 암기와 복습',
+            icon: Icons.book,
+            color: Colors.purple,
+            onTap: () {
+              context.push(AppRoutes.vocabularyPractice);
+            },
+          ),
+          const SizedBox(height: 16),
+          _buildPracticeTypeCard(
             title: '듣기 연습',
             description: '영어 듣기 실력을 향상시켜보세요',
             icon: Icons.headphones,
             color: Colors.green,
             onTap: () {
-              // TODO: 듣기 연습 화면으로 이동
               context.push(AppRoutes.listeningPractice);
             },
           ),
@@ -42,19 +51,7 @@ class PracticeScreen extends ConsumerWidget {
             icon: Icons.edit,
             color: Colors.orange,
             onTap: () {
-              // TODO: 쓰기 연습 화면으로 이동
               context.push(AppRoutes.writingPractice);
-            },
-          ),
-          const SizedBox(height: 16),
-          _buildPracticeTypeCard(
-            title: '단어 연습',
-            description: '효과적인 단어 암기와 복습',
-            icon: Icons.book,
-            color: Colors.purple,
-            onTap: () {
-              // TODO: 단어 연습 화면으로 이동
-              context.push(AppRoutes.vocabularyPractice);
             },
           ),
           const SizedBox(height: 24),

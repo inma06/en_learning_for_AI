@@ -13,6 +13,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/chat_message.dart';
 import '../widgets/mic_button.dart';
 import '../widgets/suggestion_list.dart';
+import '../../../vocabulary/domain/models/word_list.dart';
+import '../../../vocabulary/domain/models/word.dart';
 
 class SpeakingPracticeScreen extends ConsumerStatefulWidget {
   const SpeakingPracticeScreen({super.key});
@@ -68,6 +70,30 @@ class _SpeakingPracticeScreenState
     'C1': '다양한 주제에 대해 유창하고 자연스럽게 대화할 수 있어요. 복잡한 문장 구조와 고급 어휘도 잘 활용할 수 있어요.',
     'C2': '실수 없이 거의 완벽하게 영어를 구사할 수 있어요. 학문적, 전문적 상황에서도 완전한 의사소통이 가능해요.',
   };
+
+  // 임시 단어장 데이터 (나중에 실제 데이터로 교체)
+  final WordList _tempWordList = WordList(
+    id: 'temp',
+    title: '기본 단어장',
+    description: '기본 단어 학습',
+    words: [
+      Word(
+        id: '1',
+        english: 'apple',
+        korean: '사과',
+        lastPracticed: DateTime.now(),
+      ),
+      Word(
+        id: '2',
+        english: 'banana',
+        korean: '바나나',
+        lastPracticed: DateTime.now(),
+      ),
+      // ... more words
+    ],
+    createdAt: DateTime.now(),
+    lastStudied: DateTime.now(),
+  );
 
   @override
   void initState() {
@@ -215,7 +241,6 @@ class _SpeakingPracticeScreenState
       appBar: AppBar(
         title: const Text('Speaking Practice'),
         actions: [
-          // 레벨 설명 버튼
           IconButton(
             icon: const Icon(Icons.info_outline),
             onPressed: () => _showLevelDescriptionDialog(),
@@ -271,42 +296,49 @@ class _SpeakingPracticeScreenState
                   color: Colors.grey[100],
                   child: Stack(
                     children: [
-                      ListView.builder(
+                      ListView(
                         controller: _scrollController,
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-                        itemCount: state.conversationHistory.length,
-                        itemBuilder: (context, index) {
-                          final message = state.conversationHistory[index];
-                          final isUser = message['role'] == 'user';
-                          final showAvatar = index == 0 ||
-                              state.conversationHistory[index - 1]['role'] !=
-                                  message['role'];
-                          final messageText = message['text'] ?? '';
-                          final isTranslated =
-                              _translationStates[messageText] ?? false;
+                        children: [
+                          // 기존 대화 기록
+                          ...state.conversationHistory.map((message) {
+                            final isUser = message['role'] == 'user';
+                            final showAvatar =
+                                state.conversationHistory.indexOf(message) ==
+                                        0 ||
+                                    state.conversationHistory[state
+                                                .conversationHistory
+                                                .indexOf(message) -
+                                            1]['role'] !=
+                                        message['role'];
+                            final messageText = message['text'] ?? '';
+                            final isTranslated =
+                                _translationStates[messageText] ?? false;
 
-                          return ChatMessage(
-                            message: message,
-                            isUser: isUser,
-                            showAvatar: showAvatar,
-                            onSpeak: () => _speakResponse(messageText),
-                            onTranslate: () async {
-                              setState(() {
-                                _translationStates[messageText] = !isTranslated;
-                              });
-                              if (!isTranslated) {
-                                final translatedText =
-                                    await _translateMessage(messageText);
+                            return ChatMessage(
+                              message: message,
+                              isUser: isUser,
+                              showAvatar: showAvatar,
+                              onSpeak: () => _speakResponse(messageText),
+                              onTranslate: () async {
                                 setState(() {
-                                  _translatedMessages[messageText] =
-                                      translatedText;
+                                  _translationStates[messageText] =
+                                      !isTranslated;
                                 });
-                              }
-                            },
-                            isTranslated: isTranslated,
-                            translatedText: _translatedMessages[messageText],
-                          );
-                        },
+                                if (!isTranslated) {
+                                  final translatedText =
+                                      await _translateMessage(messageText);
+                                  setState(() {
+                                    _translatedMessages[messageText] =
+                                        translatedText;
+                                  });
+                                }
+                              },
+                              isTranslated: isTranslated,
+                              translatedText: _translatedMessages[messageText],
+                            );
+                          }).toList(),
+                        ],
                       ),
                       if (state.text.isNotEmpty)
                         Positioned(
