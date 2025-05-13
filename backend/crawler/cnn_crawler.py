@@ -8,6 +8,20 @@ import sys
 from pathlib import Path
 import openai
 import json
+import logging
+from typing import Optional, Dict, List
+import time
+
+# 로깅 설정
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('crawler.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 # 프로젝트 루트 경로를 Python 경로에 추가
 project_root = str(Path(__file__).parent.parent.parent)
@@ -16,116 +30,155 @@ sys.path.append(project_root)
 # 루트 디렉토리의 .env 파일에서 환경 변수 로드
 load_dotenv(os.path.join(project_root, '.env'))
 
-# MongoDB 연결 설정
-MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/language_learning')
-client = MongoClient(MONGO_URI)
-db = client.language_learning
-headlines_collection = db.headlines
-questions_collection = db.questions
+class CrawlerError(Exception):
+    """크롤러 관련 커스텀 예외"""
+    pass
 
-# OpenAI 설정
-openai.api_key = os.getenv('OPENAI_API_KEY')
+class CNNCrawler:
+    def __init__(self):
+        self.mongo_uri = os.getenv('MONGO_URI', 'mongodb://localhost:27017/language_learning')
+        self.openai_api_key = os.getenv('OPENAI_API_KEY')
+        if not self.openai_api_key:
+            raise CrawlerError("OPENAI_API_KEY가 설정되지 않았습니다.")
+        
+        self.client = MongoClient(self.mongo_uri)
+        self.db = self.client.language_learning
+        self.headlines_collection = self.db.headlines
+        self.questions_collection = self.db.questions
+        
+        # 인덱스 생성
+        self._create_indexes()
+        
+    def _create_indexes(self):
+        """필요한 인덱스 생성"""
+        try:
+            self.headlines_collection.create_index([('title', 1)], unique=True)
+            self.questions_collection.create_index([('headline', 1)], unique=True)
+            logger.info("인덱스 생성 완료")
+        except Exception as e:
+            logger.error(f"인덱스 생성 중 오류 발생: {e}")
+            raise
 
-def generate_question(headline):
-    try:
-        client = openai.OpenAI()
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant that creates English exam questions based on news headlines."},
-                {"role": "user", "content": f"Create a multiple choice question based on this headline: {headline}. Return the response in JSON format with 'question', 'choices' (array of 4 options), and 'answer' (the correct choice)."}
+    def generate_question(self, headline: str) -> Optional[Dict]:
+        """헤드라인을 기반으로 문제 생성"""
+        try:
+            client = openai.OpenAI(api_key=self.openai_api_key)
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant that creates English exam questions based on news headlines."},
+                    {"role": "user", "content": f"Create a multiple choice question based on this headline: {headline}. Return the response in JSON format with 'question', 'choices' (array of 4 options), and 'answer' (the correct choice)."}
+                ]
+            )
+            return json.loads(response.choices[0].message.content)
+        except Exception as e:
+            logger.error(f"문제 생성 중 오류 발생 (헤드라인: {headline}): {e}")
+            return None
+
+    def crawl_headlines(self) -> List[str]:
+        """CNN에서 헤드라인 수집"""
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            response = requests.get('https://edition.cnn.com/', headers=headers, timeout=10)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            headlines = []
+            
+            # 여러 가능한 셀렉터 시도
+            selectors = [
+                '.container__headline',
+                '.card__headline',
+                '.container__headline-text'
             ]
-        )
-        return json.loads(response.choices[0].message.content)
-    except Exception as e:
-        print(f"Error generating question for headline '{headline}':\n{e}")
-        return None
+            
+            for selector in selectors:
+                elements = soup.select(selector)
+                headlines.extend([el.get_text().strip() for el in elements if el.get_text().strip()])
+            
+            return list(set(headlines))  # 중복 제거
+            
+        except requests.RequestException as e:
+            logger.error(f"CNN 웹사이트 접근 중 오류 발생: {e}")
+            raise CrawlerError(f"CNN 웹사이트 접근 실패: {e}")
+        except Exception as e:
+            logger.error(f"헤드라인 파싱 중 오류 발생: {e}")
+            raise CrawlerError(f"헤드라인 파싱 실패: {e}")
 
-def crawl_cnn_headlines():
-    try:
-        # CNN 홈페이지 가져오기
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-        response = requests.get('https://edition.cnn.com/', headers=headers)
-        response.raise_for_status()
-        
-        # HTML 파싱
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # 디버깅: HTML 구조 확인
-        print("HTML 구조 확인 중...")
-        
-        # 여러 가능한 셀렉터 시도
-        headlines = []
-        
-        # 메인 헤드라인
-        main_headlines = soup.select('.container__headline')
-        if main_headlines:
-            headlines.extend(main_headlines)
-            print(f"메인 헤드라인 {len(main_headlines)}개 발견")
+    def process_headline(self, headline: str) -> bool:
+        """단일 헤드라인 처리"""
+        try:
+            current_date = datetime.now(timezone.utc)
             
-        # 카드 헤드라인
-        card_headlines = soup.select('.card__headline')
-        if card_headlines:
-            headlines.extend(card_headlines)
-            print(f"카드 헤드라인 {len(card_headlines)}개 발견")
-            
-        # 컨테이너 헤드라인
-        container_headlines = soup.select('.container__headline-text')
-        if container_headlines:
-            headlines.extend(container_headlines)
-            print(f"컨테이너 헤드라인 {len(container_headlines)}개 발견")
-        
-        # 헤드라인 처리 및 저장
-        current_date = datetime.now(timezone.utc)
-        for headline in headlines:
-            title = headline.get_text().strip()
-            
-            # 빈 제목 건너뛰기
-            if not title:
-                continue
-                
             # 중복 체크
-            if headlines_collection.find_one({'title': title}):
-                print(f"중복된 헤드라인 건너뛰기: {title}")
-                continue
-                
-            # 헤드라인 문서 생성
+            if self.headlines_collection.find_one({'title': headline}):
+                logger.info(f"중복된 헤드라인 건너뛰기: {headline}")
+                return False
+            
+            # 헤드라인 저장
             headline_doc = {
                 'source': 'CNN',
-                'title': title,
+                'title': headline,
                 'createdAt': current_date,
                 'date': current_date
             }
             
-            # MongoDB에 헤드라인 저장
-            headlines_collection.insert_one(headline_doc)
-            print(f"새로운 헤드라인 추가: {title}")
+            self.headlines_collection.insert_one(headline_doc)
+            logger.info(f"새로운 헤드라인 추가: {headline}")
             
             # 문제 생성 및 저장
-            question_data = generate_question(title)
+            question_data = self.generate_question(headline)
             if question_data:
                 question_doc = {
-                    'headline': title,
+                    'headline': headline,
                     'source': 'CNN',
                     'question': question_data['question'],
                     'choices': question_data['choices'],
                     'answer': question_data['answer'],
                     'createdAt': current_date,
-                    'date': current_date
+                    'date': current_date,
+                    'difficulty': 'medium',  # 기본값
+                    'category': 'general'    # 기본값
                 }
-                questions_collection.insert_one(question_doc)
-                print(f"문제 생성 및 저장 완료: {title}")
+                
+                # 중복 체크 후 저장
+                if not self.questions_collection.find_one({'headline': headline}):
+                    self.questions_collection.insert_one(question_doc)
+                    logger.info(f"문제 생성 및 저장 완료: {headline}")
+                    return True
             
-    except requests.RequestException as e:
-        print(f"CNN 웹사이트 가져오기 오류: {e}")
-    except Exception as e:
-        print(f"헤드라인 처리 중 오류 발생: {e}")
-    finally:
-        client.close()
+            return False
+            
+        except Exception as e:
+            logger.error(f"헤드라인 처리 중 오류 발생: {e}")
+            return False
+
+    def run(self):
+        """크롤러 실행"""
+        try:
+            logger.info("CNN 헤드라인 크롤러 시작...")
+            headlines = self.crawl_headlines()
+            
+            success_count = 0
+            for headline in headlines:
+                if self.process_headline(headline):
+                    success_count += 1
+                time.sleep(1)  # API 호출 제한 방지
+            
+            logger.info(f"크롤링 완료! 성공: {success_count}/{len(headlines)}")
+            
+        except Exception as e:
+            logger.error(f"크롤러 실행 중 오류 발생: {e}")
+            raise
+        finally:
+            self.client.close()
 
 if __name__ == "__main__":
-    print("CNN 헤드라인 크롤러 시작...")
-    crawl_cnn_headlines()
-    print("크롤링 완료!") 
+    try:
+        crawler = CNNCrawler()
+        crawler.run()
+    except Exception as e:
+        logger.error(f"크롤러 실행 실패: {e}")
+        sys.exit(1) 

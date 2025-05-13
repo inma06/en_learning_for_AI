@@ -5,15 +5,20 @@ const {
   getQuestions,
   getQuestionsByDate
 } = require('../controllers/openaiController');
+const apiLimiter = require('../middlewares/rateLimiter');
+const cache = require('../middlewares/cache');
 
-// 헤드라인 목록 조회
-router.get('/headlines', getHeadlines);
+// 모든 라우트에 rate limiter 적용
+router.use(apiLimiter);
 
-// 문제 목록 조회 (GET - 기본 10개, POST - 개수 지정)
-router.get('/questions', getQuestions);
+// 헤드라인 목록 조회 (5분 캐시)
+router.get('/headlines', cache(300), getHeadlines);
+
+// 문제 목록 조회 (5분 캐시)
+router.get('/questions', cache(300), getQuestions);
 router.post('/questions', getQuestions);
 
-// 특정 날짜의 문제 조회
-router.get('/questions/date/:date', getQuestionsByDate);
+// 특정 날짜의 문제 조회 (5분 캐시)
+router.get('/questions/date/:date', cache(300), getQuestionsByDate);
 
 module.exports = router; 

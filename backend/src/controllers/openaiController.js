@@ -16,20 +16,36 @@ const getHeadlines = async (req, res) => {
 // 지정된 개수의 문제 생성
 const getQuestions = async (req, res) => {
   try {
-    const { count = 20 } = req.body;
-    const questionCount = Math.min(Math.max(parseInt(count), 10), 50); // 10~50 사이로 제한
-    
-    const questions = await Question.find({})
+    const { 
+      difficulty,
+      category,
+      page = 1,
+      limit = 10
+    } = req.query;
+
+    // 쿼리 조건 구성
+    const query = {};
+    if (difficulty) query.difficulty = difficulty;
+    if (category) query.category = category;
+
+    // 페이지네이션 계산
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const totalQuestions = await Question.countDocuments(query);
+
+    const questions = await Question.find(query)
       .sort({ date: -1 })
-      .limit(questionCount)
-      .select('headline question choices answer date');
+      .skip(skip)
+      .limit(parseInt(limit))
+      .select('headline question choices answer date difficulty category');
     
     if (questions.length === 0) {
       return res.status(404).json({ error: 'No questions found in database' });
     }
 
     res.json({ 
-      totalQuestions: questions.length,
+      totalQuestions,
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(totalQuestions / parseInt(limit)),
       questions 
     });
   } catch (error) {

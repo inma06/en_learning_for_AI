@@ -35,13 +35,15 @@ services:
 
   crawler:
     build:
-      context: ./crawler
+      context: ./backend/crawler
       dockerfile: Dockerfile
     container_name: language_learning_crawler
     volumes:
-      - ./crawler:/app
+      - ./backend/crawler:/app
+      - crawler_logs:/var/log
     environment:
       - MONGODB_URI=mongodb://admin:password@mongodb:27017
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     depends_on:
       - mongodb
     networks:
@@ -49,6 +51,7 @@ services:
 
 volumes:
   mongodb_data:
+  crawler_logs:
 
 networks:
   app_network:
