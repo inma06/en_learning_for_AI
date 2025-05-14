@@ -22,7 +22,7 @@ void main() {
 
   group('ApiService Tests', () {
     test('getQuestions returns QuestionResult on success', () async {
-      final mockResponse = '''
+      const mockResponse = '''
         {
           "questions": [
             {

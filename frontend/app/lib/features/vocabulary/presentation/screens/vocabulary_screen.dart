@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/word.dart';
-import '../../domain/models/word_list.dart';
-import '../../domain/services/vocabulary_service.dart';
 import '../widgets/word_quiz.dart';
 
 class VocabularyScreen extends ConsumerStatefulWidget {
