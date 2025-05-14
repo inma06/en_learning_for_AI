@@ -15,7 +15,17 @@ const app = express();
 
 // 미들웨어
 app.use(helmet());
-app.use(cors());
+
+// CORS 옵션 설정
+const corsOptions = {
+  origin: '*', // 실제 프로덕션에서는 특정 도메인들로 제한하는 것이 좋습니다. 예: 'http://localhost:12345' 또는 ['http://localhost:12345', 'https://your-app.com']
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  credentials: true, // 쿠키 등 자격 증명 정보 허용 여부
+  optionsSuccessStatus: 204 // 일부 레거시 브라우저 (IE11, various SmartTVs)는 204를 반환
+};
+app.use(cors(corsOptions));
+// app.use(cors()); // 기존 cors() 호출은 주석 처리하거나 삭제합니다.
+
 app.use(morgan('dev'));
 app.use(express.json());
 
