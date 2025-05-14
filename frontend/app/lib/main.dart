@@ -8,6 +8,7 @@ import 'package:language_learning_app/features/practice/presentation/screens/qui
 import 'package:language_learning_app/features/home/presentation/screens/home_screen.dart';
 import 'package:language_learning_app/features/news/presentation/screens/news_screen.dart';
 import 'package:language_learning_app/features/news/presentation/screens/news_quiz_screen.dart';
+import 'package:language_learning_app/features/news/domain/models/quiz_progress_state.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +17,8 @@ void main() async {
   await dotenv.load(fileName: '../.env');
 
   await Hive.initFlutter();
+  Hive.registerAdapter(QuizProgressStateAdapter());
+
   runApp(const ProviderScope(child: MyApp()));
 }
 

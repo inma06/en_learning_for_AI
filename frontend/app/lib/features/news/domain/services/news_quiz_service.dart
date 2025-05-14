@@ -1,6 +1,7 @@
 import 'dart:convert'; // json.decode를 위해 추가
 import 'package:dio/dio.dart';
 import 'package:language_learning_app/features/news/domain/models/question.dart';
+import 'package:language_learning_app/features/news/domain/models/paginated_questions_response.dart'; // 추가
 
 class NewsQuizService {
   final Dio _dio;
@@ -15,14 +16,18 @@ class NewsQuizService {
     _dio.options.headers['Pragma'] = 'no-cache';
   }
 
-  Future<List<Question>> getQuestions({
+  Future<PaginatedQuestionsResponse> getQuestions({
     String? difficulty,
     String? category,
+    int page = 1, // 페이지 파라미터 추가
+    int limit = 10, // 항목 수 파라미터 추가 (기본값 10개)
   }) async {
     try {
       final queryParameters = <String, dynamic>{};
       if (difficulty != null) queryParameters['difficulty'] = difficulty;
       if (category != null) queryParameters['category'] = category;
+      queryParameters['page'] = page;
+      queryParameters['limit'] = limit;
 
       final response = await _dio.get(
         '/openai/questions',
@@ -46,16 +51,8 @@ class NewsQuizService {
               'Unexpected response data type: ${response.data.runtimeType} Data: ${response.data}');
         }
 
-        final List<dynamic> questionsData = data['questions'] as List<dynamic>;
-        return questionsData.map((json) {
-          try {
-            return Question.fromJson(json);
-          } catch (e) {
-            print('Error parsing question: $e');
-            print('Question data: $json');
-            rethrow;
-          }
-        }).toList();
+        // PaginatedQuestionsResponse.fromJson을 사용하여 파싱
+        return PaginatedQuestionsResponse.fromJson(data);
       } else {
         throw Exception('Failed to load questions: ${response.statusCode}');
       }

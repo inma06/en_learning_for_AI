@@ -17,16 +17,12 @@ const getHeadlines = async (req, res) => {
 const getQuestions = async (req, res) => {
   try {
     const { 
-      difficulty,
-      category,
       page = 1,
       limit = 10
     } = req.query;
 
     // 쿼리 조건 구성
     const query = {};
-    if (difficulty) query.difficulty = difficulty;
-    if (category) query.category = category;
 
     // 페이지네이션 계산
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -36,7 +32,8 @@ const getQuestions = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
-      .select('headline paragraph question choices answer createdAt difficulty category');
+      .select('headline paragraph source main_idea_question fill_in_the_blank_question createdAt')
+      .lean();
     
     if (questions.length === 0) {
       return res.status(404).json({ error: 'No questions found in database' });
@@ -69,7 +66,8 @@ const getQuestionsByDate = async (req, res) => {
         $lte: endDate
       }
     }).sort({ createdAt: -1 })
-      .select('headline paragraph question choices answer createdAt difficulty category');
+      .select('headline paragraph source main_idea_question fill_in_the_blank_question createdAt')
+      .lean();
 
     if (questions.length === 0) {
       return res.status(404).json({ error: 'No questions found for the specified date' });
