@@ -7,11 +7,12 @@
 ```
 .
 ├── backend/           # Express.js 기반 API 서버
+│   └── crawler/       # Python 기반 뉴스 헤드라인 스크래퍼
 ├── frontend/
 │   ├── app/          # Flutter 기반 모바일 앱 (iOS, Android)
 │   └── web-admin/    # Next.js 기반 관리자 콘솔
-├── crawler/          # Python 기반 뉴스 헤드라인 스크래퍼
-└── docker/           # Docker 설정 파일
+├── docker/            # Docker 설정 파일 (docker-compose.yml 포함)
+└── docs/              # 프로젝트 관련 문서
 ```
 
 ## 기술 스택
