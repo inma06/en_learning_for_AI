@@ -33,10 +33,10 @@ const getQuestions = async (req, res) => {
     const totalQuestions = await Question.countDocuments(query);
 
     const questions = await Question.find(query)
-      .sort({ date: -1 })
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
-      .select('headline question choices answer date difficulty category');
+      .select('headline paragraph question choices answer createdAt difficulty category');
     
     if (questions.length === 0) {
       return res.status(404).json({ error: 'No questions found in database' });
@@ -59,16 +59,17 @@ const getQuestionsByDate = async (req, res) => {
   try {
     const { date } = req.params;
     const startDate = new Date(date);
-    startDate.setHours(0, 0, 0, 0);
+    startDate.setUTCHours(0, 0, 0, 0);
     const endDate = new Date(date);
-    endDate.setHours(23, 59, 59, 999);
+    endDate.setUTCHours(23, 59, 59, 999);
 
     const questions = await Question.find({
-      date: {
+      createdAt: {
         $gte: startDate,
         $lte: endDate
       }
-    }).sort({ date: -1 });
+    }).sort({ createdAt: -1 })
+      .select('headline paragraph question choices answer createdAt difficulty category');
 
     if (questions.length === 0) {
       return res.status(404).json({ error: 'No questions found for the specified date' });

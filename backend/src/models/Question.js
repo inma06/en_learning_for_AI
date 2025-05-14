@@ -6,11 +6,9 @@ const questionSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  source: {
+  paragraph: {
     type: String,
-    required: true,
-    enum: ['CNN', 'BBC', 'Reuters'],
-    default: 'CNN'
+    required: true
   },
   question: {
     type: String,
@@ -36,31 +34,7 @@ const questionSchema = new mongoose.Schema({
     required: true,
     default: 'general'
   },
-  userResponses: [{
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true
-    },
-    selectedAnswer: {
-      type: String,
-      required: true
-    },
-    isCorrect: {
-      type: Boolean,
-      required: true
-    },
-    answeredAt: {
-      type: Date,
-      default: Date.now
-    }
-  }],
   createdAt: {
-    type: Date,
-    required: true,
-    default: Date.now
-  },
-  date: {
     type: Date,
     required: true,
     default: Date.now
@@ -68,10 +42,9 @@ const questionSchema = new mongoose.Schema({
 });
 
 // 인덱스 생성
-questionSchema.index({ headline: 1, date: -1 });
-questionSchema.index({ date: -1 });
+questionSchema.index({ headline: 1, createdAt: -1 });
+questionSchema.index({ createdAt: -1 });
 questionSchema.index({ difficulty: 1, category: 1 });
-questionSchema.index({ 'userResponses.userId': 1 });
 
 const Question = mongoose.model('Question', questionSchema);
 

@@ -48,14 +48,28 @@ class NewsQuizScreen extends ConsumerWidget {
                         Text(
                           currentQuestion.headline,
                           style: const TextStyle(
-                            fontSize: 18,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
+                        if (currentQuestion.paragraph != null &&
+                            currentQuestion.paragraph!.isNotEmpty) ...[
+                          Text(
+                            currentQuestion.paragraph!,
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontStyle: FontStyle.italic,
+                                color: Colors.grey[700]),
+                          ),
+                          const SizedBox(height: 20),
+                          Divider(),
+                          const SizedBox(height: 20),
+                        ],
                         Text(
                           currentQuestion.question,
-                          style: const TextStyle(fontSize: 16),
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),

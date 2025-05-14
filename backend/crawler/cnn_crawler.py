@@ -59,20 +59,50 @@ class CNNCrawler:
             logger.error(f"인덱스 생성 중 오류 발생: {e}")
             raise
 
-    def generate_question(self, headline: str) -> Optional[Dict]:
-        """헤드라인을 기반으로 문제 생성"""
+    def generate_paragraph_from_headline(self, headline: str) -> Optional[str]:
+        """헤드라인을 기반으로 뉴스 지문 생성"""
         try:
             client = openai.OpenAI(api_key=self.openai_api_key)
             response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant that creates English exam questions based on news headlines."},
-                    {"role": "user", "content": f"Create a multiple choice question based on this headline: {headline}. Return the response in JSON format with 'question', 'choices' (array of 4 options), and 'answer' (the correct choice)."}
+                    {"role": "system", "content": "You are a professional news writer."},
+                    {"role": "user", "content": f"Given the following headline, write a short news paragraph (3-5 sentences) in a neutral, CNN-style tone.\nHeadline: \"{headline}\""}
                 ]
             )
-            return json.loads(response.choices[0].message.content)
+            paragraph = response.choices[0].message.content
+            if paragraph:
+                return paragraph.strip()
+            logger.warning(f"OpenAI API로부터 빈 지문 응답 (헤드라인: {headline})")
+            return None
         except Exception as e:
-            logger.error(f"문제 생성 중 오류 발생 (헤드라인: {headline}): {e}")
+            logger.error(f"뉴스 지문 생성 중 OpenAI API 오류 (헤드라인: {headline}): {e}")
+            return None
+
+    def generate_question_from_paragraph(self, paragraph: str) -> Optional[Dict]:
+        """뉴스 지문을 기반으로 문제 생성"""
+        content = None # content 변수 초기화
+        try:
+            client = openai.OpenAI(api_key=self.openai_api_key)
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are an English exam writer."},
+                    {"role": "user", "content": f"Given the following news paragraph, create one English multiple-choice question (4 choices) based on the main idea. Return the response in JSON format with 'question', 'choices' (array of 4 options), and 'answer' (the correct choice).\n\nParagraph:\n{paragraph}"}
+                ]
+            )
+            content = response.choices[0].message.content
+            if content:
+                return json.loads(content)
+            logger.warning(f"OpenAI API로부터 빈 문제 응답 (지문: {paragraph[:100]}...)")
+            return None
+        except json.JSONDecodeError as e:
+            logger.error(f"문제 생성 결과 JSON 파싱 오류 (지문: {paragraph[:100]}...): {e}")
+            if content: # content가 None이 아닐 경우에만 로깅
+                logger.error(f"OpenAI API 원본 응답 내용: {content}")
+            return None
+        except Exception as e:
+            logger.error(f"문제 생성 중 OpenAI API 오류 (지문: {paragraph[:100]}...): {e}")
             return None
 
     def crawl_headlines(self) -> List[str]:
@@ -112,47 +142,60 @@ class CNNCrawler:
         try:
             current_date = datetime.now(timezone.utc)
             
-            # 중복 체크
+            # 중복 헤드라인 체크
             if self.headlines_collection.find_one({'title': headline}):
                 logger.info(f"중복된 헤드라인 건너뛰기: {headline}")
                 return False
             
-            # 헤드라인 저장
+            # 헤드라인 저장 (선택 사항: 헤드라인 자체를 별도로 저장할 필요가 없다면 이 부분은 제거 가능)
             headline_doc = {
                 'source': 'CNN',
                 'title': headline,
                 'createdAt': current_date,
-                'date': current_date
+                'date': current_date # 기존 필드 유지
+            }
+            self.headlines_collection.insert_one(headline_doc) # questions 컬렉션과 headline 필드로 join 가능
+            logger.info(f"새로운 헤드라인 추가 및 저장: {headline}")
+
+            # 1. 헤드라인으로 뉴스 지문 생성
+            paragraph = self.generate_paragraph_from_headline(headline)
+            if not paragraph:
+                # logger.warning(f"뉴스 지문 생성 실패, 헤드라인 건너뛰기: {headline}") # generate_paragraph_from_headline 내부에서 이미 로깅
+                return False
+            
+            logger.info(f"뉴스 지문 생성 완료 (헤드라인: {headline})")
+
+            # 2. 뉴스 지문으로 문제 생성
+            question_data = self.generate_question_from_paragraph(paragraph)
+            if not question_data:
+                # logger.warning(f"문제 생성 실패, 헤드라인 건너뛰기: {headline}") # generate_question_from_paragraph 내부에서 이미 로깅
+                return False
+
+            logger.info(f"문제 생성 완료 (헤드라인: {headline})")
+
+            # 3. MongoDB에 새로운 구조로 문제 저장
+            question_doc = {
+                'headline': headline,
+                'paragraph': paragraph,
+                'question': question_data['question'],
+                'choices': question_data['choices'],
+                'answer': question_data['answer'],
+                'createdAt': current_date,
+                'difficulty': 'medium', 
+                'category': 'general'  
             }
             
-            self.headlines_collection.insert_one(headline_doc)
-            logger.info(f"새로운 헤드라인 추가: {headline}")
-            
-            # 문제 생성 및 저장
-            question_data = self.generate_question(headline)
-            if question_data:
-                question_doc = {
-                    'headline': headline,
-                    'source': 'CNN',
-                    'question': question_data['question'],
-                    'choices': question_data['choices'],
-                    'answer': question_data['answer'],
-                    'createdAt': current_date,
-                    'date': current_date,
-                    'difficulty': 'medium',  # 기본값
-                    'category': 'general'    # 기본값
-                }
-                
-                # 중복 체크 후 저장
-                if not self.questions_collection.find_one({'headline': headline}):
-                    self.questions_collection.insert_one(question_doc)
-                    logger.info(f"문제 생성 및 저장 완료: {headline}")
-                    return True
-            
-            return False
+            # 중복 문제 체크 (헤드라인 기준)
+            if not self.questions_collection.find_one({'headline': headline}):
+                self.questions_collection.insert_one(question_doc)
+                logger.info(f"뉴스 지문 및 문제 저장 완료: {headline}")
+                return True
+            else:
+                logger.info(f"이미 처리된 헤드라인(문제 존재), 건너뛰기: {headline}")
+                return False
             
         except Exception as e:
-            logger.error(f"헤드라인 처리 중 오류 발생: {e}")
+            logger.error(f"헤드라인 처리 중 예기치 않은 오류 발생 (헤드라인: {headline}): {e}")
             return False
 
     def run(self):

@@ -1,24 +1,26 @@
 class Question {
+  final String? id;
   final String headline;
+  final String? paragraph;
   final String question;
   final List<String> choices;
   final String answer;
   final String difficulty;
   final String category;
-  final DateTime date;
-  final String? id;
+  final DateTime createdAt;
   String? userResponse;
   bool? isCorrect;
 
   Question({
+    this.id,
     required this.headline,
+    this.paragraph,
     required this.question,
     required this.choices,
     required this.answer,
     required this.difficulty,
     required this.category,
-    required this.date,
-    this.id,
+    required this.createdAt,
     this.userResponse,
     this.isCorrect,
   });
@@ -27,12 +29,13 @@ class Question {
     return Question(
       id: json['_id'] as String?,
       headline: json['headline'] as String,
+      paragraph: json['paragraph'] as String?,
       question: json['question'] as String,
       choices: List<String>.from(json['choices'] as List),
       answer: json['answer'] as String,
       difficulty: json['difficulty'] as String,
       category: json['category'] as String,
-      date: DateTime.parse(json['date'] as String),
+      createdAt: DateTime.parse(json['createdAt'] as String),
     );
   }
 
@@ -40,36 +43,39 @@ class Question {
     return {
       '_id': id,
       'headline': headline,
+      'paragraph': paragraph,
       'question': question,
       'choices': choices,
       'answer': answer,
       'difficulty': difficulty,
       'category': category,
-      'date': date.toIso8601String(),
+      'createdAt': createdAt.toIso8601String(),
     };
   }
 
   Question copyWith({
+    String? id,
     String? headline,
+    String? paragraph,
     String? question,
     List<String>? choices,
     String? answer,
     String? difficulty,
     String? category,
-    DateTime? date,
-    String? id,
+    DateTime? createdAt,
     String? userResponse,
     bool? isCorrect,
   }) {
     return Question(
+      id: id ?? this.id,
       headline: headline ?? this.headline,
+      paragraph: paragraph ?? this.paragraph,
       question: question ?? this.question,
       choices: choices ?? this.choices,
       answer: answer ?? this.answer,
       difficulty: difficulty ?? this.difficulty,
       category: category ?? this.category,
-      date: date ?? this.date,
-      id: id ?? this.id,
+      createdAt: createdAt ?? this.createdAt,
       userResponse: userResponse ?? this.userResponse,
       isCorrect: isCorrect ?? this.isCorrect,
     );
