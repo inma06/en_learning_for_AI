@@ -68,7 +68,7 @@ class Word {
   }
 
   String _getHint(String word) {
-    if (word.length <= 2) return word[0] + '*';
+    if (word.length <= 2) return '${word[0]}*';
     return word.substring(0, 2) + '*' * (word.length - 2);
   }
 }

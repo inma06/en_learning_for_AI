@@ -19,6 +19,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../features/splash/presentation/screens/splash_screen.dart';
+import '../../features/splash/presentation/screens/permission_screen.dart';
 import 'app_router_config.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
