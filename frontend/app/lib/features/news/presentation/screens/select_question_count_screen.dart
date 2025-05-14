@@ -87,7 +87,8 @@ class _SelectQuestionCountScreenState
       // 데이터 로드가 완료될 때까지 기다림
       await ref
           .read(questionsStateNotifierProvider.notifier)
-          .fetchQuestionsStartingFromPage(progress.currentPageForApi);
+          .fetchQuestionsStartingFromPage(progress.currentPageForApi,
+              progress.questionDisplayIndex, progress.selectedLimit);
 
       // 저장된 진행 상태는 이어풀기 후 삭제 (다음에 다시 이 화면으로 오면 새로 시작해야 함)
       await _clearSavedProgress();

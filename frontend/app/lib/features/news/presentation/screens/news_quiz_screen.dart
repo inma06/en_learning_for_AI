@@ -154,7 +154,7 @@ class _NewsQuizScreenState extends ConsumerState<NewsQuizScreen>
 
     final currentQuestionNumber =
         ref.watch(currentQuestionNumberDisplayProvider);
-    final totalQuestionsCount = ref.watch(totalQuestionCountDisplayProvider);
+    final totalQuestionsCount = ref.watch(selectedQuestionLimitProvider);
 
     Widget bodyContent = const Center(
         child: CircularProgressIndicator(semanticsLabel: '콘텐츠 로딩 중...'));
@@ -351,7 +351,7 @@ class _NewsQuizScreenState extends ConsumerState<NewsQuizScreen>
                                   : null)
                               : null,
                           padding: const EdgeInsets.all(16)),
-                      child: SelectableText(choice),
+                      child: Text(choice),
                     ),
                   );
                 }).toList(),
