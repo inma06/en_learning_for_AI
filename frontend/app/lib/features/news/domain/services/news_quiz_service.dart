@@ -1,3 +1,4 @@
+import 'dart:convert'; // json.decode를 위해 추가
 import 'package:dio/dio.dart';
 import 'package:language_learning_app/features/news/domain/models/question.dart';
 
@@ -35,7 +36,16 @@ class NewsQuizService {
       );
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = response.data as Map<String, dynamic>;
+        final Map<String, dynamic> data;
+        if (response.data is String) {
+          data = json.decode(response.data as String) as Map<String, dynamic>;
+        } else if (response.data is Map) {
+          data = response.data as Map<String, dynamic>;
+        } else {
+          throw Exception(
+              'Unexpected response data type: ${response.data.runtimeType} Data: ${response.data}');
+        }
+
         final List<dynamic> questionsData = data['questions'] as List<dynamic>;
         return questionsData.map((json) {
           try {
