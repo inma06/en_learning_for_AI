@@ -7,7 +7,7 @@ import 'package:language_learning_app/features/news/presentation/providers/news_
 import 'package:language_learning_app/features/news/domain/models/quiz_progress_state.dart'; // QuizProgressState 임포트
 import 'package:language_learning_app/features/news/presentation/providers/select_question_count_provider.dart'; // selectedQuestionLimitProvider 임포트
 
-// ConsumerStatefulWidget으로 변경 이유: 앱 라이프사이클(예: 백그라운드 전환) 감지 및 퀴즈 상태 저장을 위해 WidgetsBindingObserver를 사용하기 위함.
+// ConsumerStatefulWidget으로 변경 이유: 앱 라이프사이클(예: 백그라운드 전환) 감지 및 퀴즈 상태 저장을 위함.
 class NewsQuizScreen extends ConsumerStatefulWidget {
   const NewsQuizScreen({super.key});
 
@@ -262,8 +262,8 @@ class _NewsQuizScreenState extends ConsumerState<NewsQuizScreen>
             userResponses[currentQuestion.hashCode];
         final bool isThisQuestionAnswered =
             userResponseForCurrentQuestion != null;
-        final newsDateFormatted =
-            DateFormat('yyyy년 MM월').format(currentQuestion.createdAt.toLocal());
+        final newsDateFormatted = DateFormat('yyyy년 MM월 dd일')
+            .format(currentQuestion.createdAt.toLocal());
 
         bodyContent = Padding(
           padding: const EdgeInsets.all(16.0),
@@ -277,12 +277,49 @@ class _NewsQuizScreenState extends ConsumerState<NewsQuizScreen>
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       SelectableText(
-                          '출처 : $newsDateFormatted${currentQuestion.source != null && currentQuestion.source!.isNotEmpty ? " ${currentQuestion.source}" : ""}',
+                          '출처: $newsDateFormatted${currentQuestion.source != null && currentQuestion.source!.isNotEmpty ? " - ${currentQuestion.source}" : ""}',
                           style: Theme.of(context).textTheme.bodySmall),
                       if (totalQuestionsCount > 0)
-                        SelectableText(
-                          '$currentQuestionNumber / $totalQuestionsCount',
-                          style: Theme.of(context).textTheme.titleMedium,
+                        Row(
+                          children: [
+                            if (currentQuestionDifficulty != null &&
+                                currentQuestionDifficulty.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                margin: const EdgeInsets.only(right: 8),
+                                decoration: BoxDecoration(
+                                  color: currentQuestionDifficulty == 'easy'
+                                      ? Colors.green.shade100
+                                      : currentQuestionDifficulty == 'medium'
+                                          ? Colors.orange.shade100
+                                          : currentQuestionDifficulty == 'hard'
+                                              ? Colors.red.shade100
+                                              : Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  currentQuestionDifficulty[0].toUpperCase() +
+                                      currentQuestionDifficulty.substring(1),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: currentQuestionDifficulty == 'easy'
+                                        ? Colors.green.shade800
+                                        : currentQuestionDifficulty == 'medium'
+                                            ? Colors.orange.shade800
+                                            : currentQuestionDifficulty ==
+                                                    'hard'
+                                                ? Colors.red.shade800
+                                                : Colors.grey.shade800,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            SelectableText(
+                              '$currentQuestionNumber / $totalQuestionsCount',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ],
                         ),
                     ],
                   ),
