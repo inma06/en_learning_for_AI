@@ -1,7 +1,7 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
 const app = require('../src/app');
-const Question = require('../src/models/question');
+const Question = require('../src/models/Question');
 
 describe('API Tests', () => {
   beforeAll(async () => {

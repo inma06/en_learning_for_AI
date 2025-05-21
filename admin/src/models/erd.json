@@ -1,0 +1,707 @@
+{
+  "canvas": {
+    "width": 1000,
+    "height": 1000,
+    "showGird": true,
+    "showPageBreaks": false,
+    "showWatermark": false,
+    "showPageNumbers": false,
+    "showRuler": true,
+    "showToolbar": true,
+    "showMiniMap": true,
+    "showContextMenu": true,
+    "showStatusBar": true,
+    "showScrollbars": true,
+    "showBreadcrumbs": true,
+    "showLineNumbers": true,
+    "showIndentGuides": true,
+    "showFolding": true,
+    "showWordWrap": true,
+    "showLineHighlight": true
+  },
+  "diagram": {
+    "id": "1",
+    "name": "Language Learning App ERD",
+    "tables": [
+      {
+        "id": "1",
+        "name": "academies",
+        "comment": "학원 정보",
+        "columns": [
+          {
+            "id": "1",
+            "name": "id",
+            "comment": "학원 ID",
+            "type": "SERIAL",
+            "option": "PRIMARY KEY",
+            "value": ""
+          },
+          {
+            "id": "2",
+            "name": "name",
+            "comment": "학원명",
+            "type": "VARCHAR(255)",
+            "option": "NOT NULL",
+            "value": ""
+          },
+          {
+            "id": "3",
+            "name": "business_number",
+            "comment": "사업자등록번호",
+            "type": "VARCHAR(20)",
+            "option": "UNIQUE NOT NULL",
+            "value": ""
+          },
+          {
+            "id": "4",
+            "name": "address",
+            "comment": "주소",
+            "type": "TEXT",
+            "option": "NOT NULL",
+            "value": ""
+          },
+          {
+            "id": "5",
+            "name": "phone",
+            "comment": "연락처",
+            "type": "VARCHAR(20)",
+            "option": "NOT NULL",
+            "value": ""
+          },
+          {
+            "id": "6",
+            "name": "email",
+            "comment": "이메일",
+            "type": "VARCHAR(255)",
+            "option": "UNIQUE NOT NULL",
+            "value": ""
+          },
+          {
+            "id": "7",
+            "name": "status",
+            "comment": "상태",
+            "type": "VARCHAR(20)",
+            "option": "DEFAULT 'active'",
+            "value": ""
+          },
+          {
+            "id": "8",
+            "name": "created_at",
+            "comment": "생성일시",
+            "type": "TIMESTAMP WITH TIME ZONE",
+            "option": "DEFAULT CURRENT_TIMESTAMP",
+            "value": ""
+          },
+          {
+            "id": "9",
+            "name": "updated_at",
+            "comment": "수정일시",
+            "type": "TIMESTAMP WITH TIME ZONE",
+            "option": "DEFAULT CURRENT_TIMESTAMP",
+            "value": ""
+          }
+        ],
+        "position": {
+          "x": 100,
+          "y": 100
+        }
+      },
+      {
+        "id": "2",
+        "name": "directors",
+        "comment": "원장 정보",
+        "columns": [
+          {
+            "id": "1",
+            "name": "id",
+            "comment": "원장 ID",
+            "type": "SERIAL",
+            "option": "PRIMARY KEY",
+            "value": ""
+          },
+          {
+            "id": "2",
+            "name": "academy_id",
+            "comment": "학원 ID",
+            "type": "INTEGER",
+            "option": "UNIQUE REFERENCES academies(id)",
+            "value": ""
+          },
+          {
+            "id": "3",
+            "name": "email",
+            "comment": "이메일",
+            "type": "VARCHAR(255)",
+            "option": "UNIQUE NOT NULL",
+            "value": ""
+          },
+          {
+            "id": "4",
+            "name": "password_hash",
+            "comment": "비밀번호 해시",
+            "type": "VARCHAR(255)",
+            "option": "NOT NULL",
+            "value": ""
+          },
+          {
+            "id": "5",
+            "name": "name",
+            "comment": "이름",
+            "type": "VARCHAR(100)",
+            "option": "NOT NULL",
+            "value": ""
+          },
+          {
+            "id": "6",
+            "name": "phone",
+            "comment": "연락처",
+            "type": "VARCHAR(20)",
+            "option": "",
+            "value": ""
+          },
+          {
+            "id": "7",
+            "name": "status",
+            "comment": "상태",
+            "type": "VARCHAR(20)",
+            "option": "DEFAULT 'active'",
+            "value": ""
+          },
+          {
+            "id": "8",
+            "name": "last_login_at",
+            "comment": "마지막 로그인",
+            "type": "TIMESTAMP WITH TIME ZONE",
+            "option": "",
+            "value": ""
+          },
+          {
+            "id": "9",
+            "name": "created_at",
+            "comment": "생성일시",
+            "type": "TIMESTAMP WITH TIME ZONE",
+            "option": "DEFAULT CURRENT_TIMESTAMP",
+            "value": ""
+          },
+          {
+            "id": "10",
+            "name": "updated_at",
+            "comment": "수정일시",
+            "type": "TIMESTAMP WITH TIME ZONE",
+            "option": "DEFAULT CURRENT_TIMESTAMP",
+            "value": ""
+          }
+        ],
+        "position": {
+          "x": 400,
+          "y": 100
+        }
+      },
+      {
+        "id": "3",
+        "name": "students",
+        "comment": "학생 정보",
+        "columns": [
+          {
+            "id": "1",
+            "name": "id",
+            "comment": "학생 ID",
+            "type": "SERIAL",
+            "option": "PRIMARY KEY",
+            "value": ""
+          },
+          {
+            "id": "2",
+            "name": "academy_id",
+            "comment": "학원 ID",
+            "type": "INTEGER",
+            "option": "REFERENCES academies(id)",
+            "value": ""
+          },
+          {
+            "id": "3",
+            "name": "name",
+            "comment": "이름",
+            "type": "VARCHAR(100)",
+            "option": "NOT NULL",
+            "value": ""
+          },
+          {
+            "id": "4",
+            "name": "email",
+            "comment": "이메일",
+            "type": "VARCHAR(255)",
+            "option": "UNIQUE",
+            "value": ""
+          },
+          {
+            "id": "5",
+            "name": "phone",
+            "comment": "연락처",
+            "type": "VARCHAR(20)",
+            "option": "",
+            "value": ""
+          },
+          {
+            "id": "6",
+            "name": "grade",
+            "comment": "학년",
+            "type": "VARCHAR(20)",
+            "option": "",
+            "value": ""
+          },
+          {
+            "id": "7",
+            "name": "status",
+            "comment": "상태",
+            "type": "VARCHAR(20)",
+            "option": "DEFAULT 'active'",
+            "value": ""
+          },
+          {
+            "id": "8",
+            "name": "created_at",
+            "comment": "생성일시",
+            "type": "TIMESTAMP WITH TIME ZONE",
+            "option": "DEFAULT CURRENT_TIMESTAMP",
+            "value": ""
+          },
+          {
+            "id": "9",
+            "name": "updated_at",
+            "comment": "수정일시",
+            "type": "TIMESTAMP WITH TIME ZONE",
+            "option": "DEFAULT CURRENT_TIMESTAMP",
+            "value": ""
+          }
+        ],
+        "position": {
+          "x": 100,
+          "y": 300
+        }
+      },
+      {
+        "id": "4",
+        "name": "subscriptions",
+        "comment": "구독 정보",
+        "columns": [
+          {
+            "id": "1",
+            "name": "id",
+            "comment": "구독 ID",
+            "type": "SERIAL",
+            "option": "PRIMARY KEY",
+            "value": ""
+          },
+          {
+            "id": "2",
+            "name": "academy_id",
+            "comment": "학원 ID",
+            "type": "INTEGER",
+            "option": "REFERENCES academies(id)",
+            "value": ""
+          },
+          {
+            "id": "3",
+            "name": "plan_type",
+            "comment": "구독 플랜",
+            "type": "VARCHAR(50)",
+            "option": "NOT NULL",
+            "value": ""
+          },
+          {
+            "id": "4",
+            "name": "max_students",
+            "comment": "최대 학생 수",
+            "type": "INTEGER",
+            "option": "NOT NULL",
+            "value": ""
+          },
+          {
+            "id": "5",
+            "name": "start_date",
+            "comment": "시작일",
+            "type": "DATE",
+            "option": "NOT NULL",
+            "value": ""
+          },
+          {
+            "id": "6",
+            "name": "end_date",
+            "comment": "종료일",
+            "type": "DATE",
+            "option": "NOT NULL",
+            "value": ""
+          },
+          {
+            "id": "7",
+            "name": "status",
+            "comment": "상태",
+            "type": "VARCHAR(20)",
+            "option": "DEFAULT 'active'",
+            "value": ""
+          },
+          {
+            "id": "8",
+            "name": "created_at",
+            "comment": "생성일시",
+            "type": "TIMESTAMP WITH TIME ZONE",
+            "option": "DEFAULT CURRENT_TIMESTAMP",
+            "value": ""
+          },
+          {
+            "id": "9",
+            "name": "updated_at",
+            "comment": "수정일시",
+            "type": "TIMESTAMP WITH TIME ZONE",
+            "option": "DEFAULT CURRENT_TIMESTAMP",
+            "value": ""
+          }
+        ],
+        "position": {
+          "x": 400,
+          "y": 300
+        }
+      },
+      {
+        "id": "5",
+        "name": "learning_contents",
+        "comment": "학습 콘텐츠",
+        "columns": [
+          {
+            "id": "1",
+            "name": "id",
+            "comment": "콘텐츠 ID",
+            "type": "SERIAL",
+            "option": "PRIMARY KEY",
+            "value": ""
+          },
+          {
+            "id": "2",
+            "name": "title",
+            "comment": "제목",
+            "type": "VARCHAR(255)",
+            "option": "NOT NULL",
+            "value": ""
+          },
+          {
+            "id": "3",
+            "name": "description",
+            "comment": "설명",
+            "type": "TEXT",
+            "option": "",
+            "value": ""
+          },
+          {
+            "id": "4",
+            "name": "content_type",
+            "comment": "콘텐츠 유형",
+            "type": "VARCHAR(50)",
+            "option": "NOT NULL",
+            "value": ""
+          },
+          {
+            "id": "5",
+            "name": "difficulty_level",
+            "comment": "난이도",
+            "type": "VARCHAR(20)",
+            "option": "",
+            "value": ""
+          },
+          {
+            "id": "6",
+            "name": "content_url",
+            "comment": "콘텐츠 URL",
+            "type": "TEXT",
+            "option": "",
+            "value": ""
+          },
+          {
+            "id": "7",
+            "name": "is_active",
+            "comment": "활성화 여부",
+            "type": "BOOLEAN",
+            "option": "DEFAULT true",
+            "value": ""
+          },
+          {
+            "id": "8",
+            "name": "created_at",
+            "comment": "생성일시",
+            "type": "TIMESTAMP WITH TIME ZONE",
+            "option": "DEFAULT CURRENT_TIMESTAMP",
+            "value": ""
+          },
+          {
+            "id": "9",
+            "name": "updated_at",
+            "comment": "수정일시",
+            "type": "TIMESTAMP WITH TIME ZONE",
+            "option": "DEFAULT CURRENT_TIMESTAMP",
+            "value": ""
+          }
+        ],
+        "position": {
+          "x": 100,
+          "y": 500
+        }
+      },
+      {
+        "id": "6",
+        "name": "student_progress",
+        "comment": "학생 진도",
+        "columns": [
+          {
+            "id": "1",
+            "name": "id",
+            "comment": "진도 ID",
+            "type": "SERIAL",
+            "option": "PRIMARY KEY",
+            "value": ""
+          },
+          {
+            "id": "2",
+            "name": "student_id",
+            "comment": "학생 ID",
+            "type": "INTEGER",
+            "option": "REFERENCES students(id)",
+            "value": ""
+          },
+          {
+            "id": "3",
+            "name": "content_id",
+            "comment": "콘텐츠 ID",
+            "type": "INTEGER",
+            "option": "REFERENCES learning_contents(id)",
+            "value": ""
+          },
+          {
+            "id": "4",
+            "name": "status",
+            "comment": "상태",
+            "type": "VARCHAR(20)",
+            "option": "DEFAULT 'not_started'",
+            "value": ""
+          },
+          {
+            "id": "5",
+            "name": "progress_percentage",
+            "comment": "진도율",
+            "type": "INTEGER",
+            "option": "DEFAULT 0",
+            "value": ""
+          },
+          {
+            "id": "6",
+            "name": "score",
+            "comment": "점수",
+            "type": "INTEGER",
+            "option": "",
+            "value": ""
+          },
+          {
+            "id": "7",
+            "name": "completed_at",
+            "comment": "완료일시",
+            "type": "TIMESTAMP WITH TIME ZONE",
+            "option": "",
+            "value": ""
+          },
+          {
+            "id": "8",
+            "name": "created_at",
+            "comment": "생성일시",
+            "type": "TIMESTAMP WITH TIME ZONE",
+            "option": "DEFAULT CURRENT_TIMESTAMP",
+            "value": ""
+          },
+          {
+            "id": "9",
+            "name": "updated_at",
+            "comment": "수정일시",
+            "type": "TIMESTAMP WITH TIME ZONE",
+            "option": "DEFAULT CURRENT_TIMESTAMP",
+            "value": ""
+          }
+        ],
+        "position": {
+          "x": 400,
+          "y": 500
+        }
+      },
+      {
+        "id": "7",
+        "name": "reports",
+        "comment": "리포트",
+        "columns": [
+          {
+            "id": "1",
+            "name": "id",
+            "comment": "리포트 ID",
+            "type": "SERIAL",
+            "option": "PRIMARY KEY",
+            "value": ""
+          },
+          {
+            "id": "2",
+            "name": "academy_id",
+            "comment": "학원 ID",
+            "type": "INTEGER",
+            "option": "REFERENCES academies(id)",
+            "value": ""
+          },
+          {
+            "id": "3",
+            "name": "student_id",
+            "comment": "학생 ID",
+            "type": "INTEGER",
+            "option": "REFERENCES students(id)",
+            "value": ""
+          },
+          {
+            "id": "4",
+            "name": "report_type",
+            "comment": "리포트 유형",
+            "type": "VARCHAR(50)",
+            "option": "NOT NULL",
+            "value": ""
+          },
+          {
+            "id": "5",
+            "name": "report_data",
+            "comment": "리포트 데이터",
+            "type": "JSONB",
+            "option": "",
+            "value": ""
+          },
+          {
+            "id": "6",
+            "name": "generated_by",
+            "comment": "생성자",
+            "type": "INTEGER",
+            "option": "REFERENCES directors(id)",
+            "value": ""
+          },
+          {
+            "id": "7",
+            "name": "created_at",
+            "comment": "생성일시",
+            "type": "TIMESTAMP WITH TIME ZONE",
+            "option": "DEFAULT CURRENT_TIMESTAMP",
+            "value": ""
+          }
+        ],
+        "position": {
+          "x": 700,
+          "y": 300
+        }
+      }
+    ],
+    "relations": [
+      {
+        "id": "1",
+        "name": "academy_director",
+        "type": "1:1",
+        "from": {
+          "table": "academies",
+          "column": "id"
+        },
+        "to": {
+          "table": "directors",
+          "column": "academy_id"
+        }
+      },
+      {
+        "id": "2",
+        "name": "academy_students",
+        "type": "1:N",
+        "from": {
+          "table": "academies",
+          "column": "id"
+        },
+        "to": {
+          "table": "students",
+          "column": "academy_id"
+        }
+      },
+      {
+        "id": "3",
+        "name": "academy_subscription",
+        "type": "1:1",
+        "from": {
+          "table": "academies",
+          "column": "id"
+        },
+        "to": {
+          "table": "subscriptions",
+          "column": "academy_id"
+        }
+      },
+      {
+        "id": "4",
+        "name": "student_progress",
+        "type": "1:N",
+        "from": {
+          "table": "students",
+          "column": "id"
+        },
+        "to": {
+          "table": "student_progress",
+          "column": "student_id"
+        }
+      },
+      {
+        "id": "5",
+        "name": "content_progress",
+        "type": "1:N",
+        "from": {
+          "table": "learning_contents",
+          "column": "id"
+        },
+        "to": {
+          "table": "student_progress",
+          "column": "content_id"
+        }
+      },
+      {
+        "id": "6",
+        "name": "academy_reports",
+        "type": "1:N",
+        "from": {
+          "table": "academies",
+          "column": "id"
+        },
+        "to": {
+          "table": "reports",
+          "column": "academy_id"
+        }
+      },
+      {
+        "id": "7",
+        "name": "student_reports",
+        "type": "1:N",
+        "from": {
+          "table": "students",
+          "column": "id"
+        },
+        "to": {
+          "table": "reports",
+          "column": "student_id"
+        }
+      },
+      {
+        "id": "8",
+        "name": "director_reports",
+        "type": "1:N",
+        "from": {
+          "table": "directors",
+          "column": "id"
+        },
+        "to": {
+          "table": "reports",
+          "column": "generated_by"
+        }
+      }
+    ]
+  }
+} 

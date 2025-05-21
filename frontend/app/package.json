@@ -1,0 +1,10 @@
+{
+  "name": "@language-learning-app/frontend-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "flutter run",
+    "build": "flutter build",
+    "test": "flutter test"
+  }
+} 

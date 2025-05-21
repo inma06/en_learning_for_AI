@@ -49,10 +49,40 @@ services:
     networks:
       - app_network
 
+  postgres:
+    image: postgres:15-alpine
+    container_name: language_learning_postgres
+    environment:
+      POSTGRES_DB: language_learning
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - language_learning_network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: language_learning_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - language_learning_network
+
 volumes:
   mongodb_data:
   crawler_logs:
+  postgres_data:
 
 networks:
   app_network:
+    driver: bridge
+  language_learning_network:
     driver: bridge 

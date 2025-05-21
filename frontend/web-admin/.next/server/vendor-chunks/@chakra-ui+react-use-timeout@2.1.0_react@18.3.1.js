@@ -1,0 +1,25 @@
+"use strict";
+/*
+ * ATTENTION: An "eval-source-map" devtool has been used.
+ * This devtool is neither made for production nor for readable output files.
+ * It uses "eval()" calls to create a separate source file with attached SourceMaps in the browser devtools.
+ * If you are trying to read the output file, select a different devtool (https://webpack.js.org/configuration/devtool/)
+ * or disable the default devtool with "devtool: false".
+ * If you are looking for production-ready output files, see mode: "production" (https://webpack.js.org/configuration/mode/).
+ */
+exports.id = "vendor-chunks/@chakra-ui+react-use-timeout@2.1.0_react@18.3.1";
+exports.ids = ["vendor-chunks/@chakra-ui+react-use-timeout@2.1.0_react@18.3.1"];
+exports.modules = {
+
+/***/ "(ssr)/../../node_modules/.pnpm/@chakra-ui+react-use-timeout@2.1.0_react@18.3.1/node_modules/@chakra-ui/react-use-timeout/dist/index.mjs":
+/*!*****************************************************************************************************************************************!*\
+  !*** ../../node_modules/.pnpm/@chakra-ui+react-use-timeout@2.1.0_react@18.3.1/node_modules/@chakra-ui/react-use-timeout/dist/index.mjs ***!
+  \*****************************************************************************************************************************************/
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   useTimeout: () => (/* binding */ useTimeout)\n/* harmony export */ });\n/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react */ \"(ssr)/../../node_modules/.pnpm/next@14.1.0_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/future/route-modules/app-page/vendored/ssr/react.js\");\n/* harmony import */ var _chakra_ui_react_use_callback_ref__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @chakra-ui/react-use-callback-ref */ \"(ssr)/../../node_modules/.pnpm/@chakra-ui+react-use-callback-ref@2.1.0_react@18.3.1/node_modules/@chakra-ui/react-use-callback-ref/dist/index.mjs\");\n/* __next_internal_client_entry_do_not_use__ useTimeout auto */ // src/index.ts\n\n\nfunction useTimeout(callback, delay) {\n    const fn = (0,_chakra_ui_react_use_callback_ref__WEBPACK_IMPORTED_MODULE_1__.useCallbackRef)(callback);\n    (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(()=>{\n        if (delay == null) return void 0;\n        let timeoutId = null;\n        timeoutId = window.setTimeout(()=>{\n            fn();\n        }, delay);\n        return ()=>{\n            if (timeoutId) {\n                window.clearTimeout(timeoutId);\n            }\n        };\n    }, [\n        delay,\n        fn\n    ]);\n}\n //# sourceMappingURL=index.mjs.map\n//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiKHNzcikvLi4vLi4vbm9kZV9tb2R1bGVzLy5wbnBtL0BjaGFrcmEtdWkrcmVhY3QtdXNlLXRpbWVvdXRAMi4xLjBfcmVhY3RAMTguMy4xL25vZGVfbW9kdWxlcy9AY2hha3JhLXVpL3JlYWN0LXVzZS10aW1lb3V0L2Rpc3QvaW5kZXgubWpzIiwibWFwcGluZ3MiOiI7Ozs7OztnRUFFQSxlQUFlO0FBQ21CO0FBQ2lDO0FBQ25FLFNBQVNFLFdBQVdDLFFBQVEsRUFBRUMsS0FBSztJQUNqQyxNQUFNQyxLQUFLSixpRkFBY0EsQ0FBQ0U7SUFDMUJILGdEQUFTQSxDQUFDO1FBQ1IsSUFBSUksU0FBUyxNQUNYLE9BQU8sS0FBSztRQUNkLElBQUlFLFlBQVk7UUFDaEJBLFlBQVlDLE9BQU9DLFVBQVUsQ0FBQztZQUM1Qkg7UUFDRixHQUFHRDtRQUNILE9BQU87WUFDTCxJQUFJRSxXQUFXO2dCQUNiQyxPQUFPRSxZQUFZLENBQUNIO1lBQ3RCO1FBQ0Y7SUFDRixHQUFHO1FBQUNGO1FBQU9DO0tBQUc7QUFDaEI7QUFHRSxDQUNGLGtDQUFrQyIsInNvdXJjZXMiOlsid2VicGFjazovL3dlYi1hZG1pbi8uLi8uLi9ub2RlX21vZHVsZXMvLnBucG0vQGNoYWtyYS11aStyZWFjdC11c2UtdGltZW91dEAyLjEuMF9yZWFjdEAxOC4zLjEvbm9kZV9tb2R1bGVzL0BjaGFrcmEtdWkvcmVhY3QtdXNlLXRpbWVvdXQvZGlzdC9pbmRleC5tanM/MjJlMyJdLCJzb3VyY2VzQ29udGVudCI6WyIndXNlIGNsaWVudCdcblxuLy8gc3JjL2luZGV4LnRzXG5pbXBvcnQgeyB1c2VFZmZlY3QgfSBmcm9tIFwicmVhY3RcIjtcbmltcG9ydCB7IHVzZUNhbGxiYWNrUmVmIH0gZnJvbSBcIkBjaGFrcmEtdWkvcmVhY3QtdXNlLWNhbGxiYWNrLXJlZlwiO1xuZnVuY3Rpb24gdXNlVGltZW91dChjYWxsYmFjaywgZGVsYXkpIHtcbiAgY29uc3QgZm4gPSB1c2VDYWxsYmFja1JlZihjYWxsYmFjayk7XG4gIHVzZUVmZmVjdCgoKSA9PiB7XG4gICAgaWYgKGRlbGF5ID09IG51bGwpXG4gICAgICByZXR1cm4gdm9pZCAwO1xuICAgIGxldCB0aW1lb3V0SWQgPSBudWxsO1xuICAgIHRpbWVvdXRJZCA9IHdpbmRvdy5zZXRUaW1lb3V0KCgpID0+IHtcbiAgICAgIGZuKCk7XG4gICAgfSwgZGVsYXkpO1xuICAgIHJldHVybiAoKSA9PiB7XG4gICAgICBpZiAodGltZW91dElkKSB7XG4gICAgICAgIHdpbmRvdy5jbGVhclRpbWVvdXQodGltZW91dElkKTtcbiAgICAgIH1cbiAgICB9O1xuICB9LCBbZGVsYXksIGZuXSk7XG59XG5leHBvcnQge1xuICB1c2VUaW1lb3V0XG59O1xuLy8jIHNvdXJjZU1hcHBpbmdVUkw9aW5kZXgubWpzLm1hcCJdLCJuYW1lcyI6WyJ1c2VFZmZlY3QiLCJ1c2VDYWxsYmFja1JlZiIsInVzZVRpbWVvdXQiLCJjYWxsYmFjayIsImRlbGF5IiwiZm4iLCJ0aW1lb3V0SWQiLCJ3aW5kb3ciLCJzZXRUaW1lb3V0IiwiY2xlYXJUaW1lb3V0Il0sInNvdXJjZVJvb3QiOiIifQ==\n//# sourceURL=webpack-internal:///(ssr)/../../node_modules/.pnpm/@chakra-ui+react-use-timeout@2.1.0_react@18.3.1/node_modules/@chakra-ui/react-use-timeout/dist/index.mjs\n");
+
+/***/ })
+
+};
+;
