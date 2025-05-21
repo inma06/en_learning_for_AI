@@ -98,9 +98,9 @@ class FillInTheBlankQuestionModel {
 }
 
 class Question {
-  final String? id;
+  final String id;
   final String headline;
-  final String? paragraph;
+  final String paragraph;
   final String? source;
   final MainIdeaQuestionModel? mainIdeaQuestion;
   final FillInTheBlankQuestionModel? fillInTheBlankQuestion;
@@ -109,9 +109,9 @@ class Question {
   bool? isCorrect;
 
   Question({
-    this.id,
+    required this.id,
     required this.headline,
-    this.paragraph,
+    required this.paragraph,
     this.source,
     this.mainIdeaQuestion,
     this.fillInTheBlankQuestion,
@@ -122,10 +122,10 @@ class Question {
 
   factory Question.fromJson(Map<String, dynamic> json) {
     return Question(
-      id: json['_id'] as String?,
-      headline: json['headline'] as String,
-      paragraph: json['paragraph'] as String?,
-      source: json['source'] as String?,
+      id: json['_id'] ?? '',
+      headline: json['headline'],
+      paragraph: json['paragraph'],
+      source: json['source'],
       mainIdeaQuestion: json['main_idea_question'] != null
           ? MainIdeaQuestionModel.fromJson(
               json['main_idea_question'] as Map<String, dynamic>)
@@ -134,7 +134,7 @@ class Question {
           ? FillInTheBlankQuestionModel.fromJson(
               json['fill_in_the_blank_question'] as Map<String, dynamic>)
           : null,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: DateTime.parse(json['createdAt']),
     );
   }
 

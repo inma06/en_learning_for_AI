@@ -1,8 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:language_learning_app/features/news/domain/models/question.dart';
-import 'package:language_learning_app/features/news/domain/services/news_quiz_service.dart';
+import 'package:language_learning_app/features/news/data/services/news_quiz_service.dart';
 import 'package:language_learning_app/features/news/domain/models/paginated_questions_response.dart';
 import './select_question_count_provider.dart'; // selectedQuestionLimitProvider 임포트
+import './answered_question_ids_provider.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 // Enum to represent the type of question part to display
 enum QuestionPartType { mainIdea, fillInTheBlank }
@@ -12,7 +15,7 @@ final currentQuestionPartTypeProvider =
     StateProvider<QuestionPartType>((ref) => QuestionPartType.mainIdea);
 
 final newsQuizServiceProvider = Provider<NewsQuizService>((ref) {
-  return NewsQuizService(baseUrl: 'http://localhost:3001/api');
+  return NewsQuizService(baseUrl: 'http://localhost:3001');
 });
 
 // --- 페이지네이션을 위한 Questions State 및 Notifier ---
@@ -46,7 +49,6 @@ class QuestionsState {
     int? totalQuestions,
     String? error,
     bool? canLoadMore,
-    bool clearError = false,
   }) {
     return QuestionsState(
       questions: questions ?? this.questions,
@@ -55,97 +57,97 @@ class QuestionsState {
       currentPage: currentPage ?? this.currentPage,
       totalPages: totalPages ?? this.totalPages,
       totalQuestions: totalQuestions ?? this.totalQuestions,
-      error: clearError ? null : error ?? this.error, // clearError 플래그 추가
+      error: error ?? this.error,
       canLoadMore: canLoadMore ?? this.canLoadMore,
+    );
+  }
+
+  static QuestionsState initial() {
+    return QuestionsState(
+      isLoading: true,
+      error: null,
+      questions: [],
+      currentPage: 0,
+      totalPages: 0,
+      totalQuestions: 0,
+      canLoadMore: true,
     );
   }
 }
 
 class QuestionsNotifier extends StateNotifier<QuestionsState> {
   final NewsQuizService _newsQuizService;
-  final int _initialItemsPerPage; // 생성 시점의 아이템 수
-  final Ref _ref; // Ref 객체를 저장하기 위한 멤버 변수
+  final int _initialItemsPerPage;
+  final Ref _ref;
 
   QuestionsNotifier(this._newsQuizService, this._initialItemsPerPage, this._ref)
-      : super(QuestionsState()) {
-    // fetchInitialQuestions();
-  }
+      : super(QuestionsState(
+          isLoading: true,
+          error: null,
+          questions: [],
+          currentPage: 0,
+          totalPages: 0,
+          totalQuestions: 0,
+          canLoadMore: true,
+        ));
 
   Future<void> fetchInitialQuestions() async {
-    if (state.isLoading) return;
-    final selectedLimit =
-        _ref.read(selectedQuestionLimitProvider); // 현재 선택된 limit 가져오기
-    state = state.copyWith(
-        isLoading: true,
-        error: null,
-        clearError: true,
-        questions: [],
-        currentPage: 0,
-        totalPages: 0,
-        totalQuestions: 0,
-        canLoadMore: true); // 상태 초기화 강화
     try {
+      state = state.copyWith(isLoading: true, error: null);
+      final selectedLimit = _ref.read(selectedQuestionLimitProvider);
+      final answeredIds = _ref.read(answeredQuestionIdsProvider);
+
       final response = await _newsQuizService.getQuestions(
-          page: 1, limit: selectedLimit); // _itemsPerPage 대신 selectedLimit 사용
+        page: 1,
+        limit: selectedLimit,
+        excludeIds: answeredIds,
+      );
+
       final bool canActuallyLoadMore =
           response.currentPage < response.totalPages &&
               response.questions.length < selectedLimit;
+
       state = state.copyWith(
         questions: response.questions,
         currentPage: response.currentPage,
         totalPages: response.totalPages,
-        totalQuestions: response.totalQuestions, // API가 반환하는 전체 문제 수
+        totalQuestions: response.totalQuestions,
         isLoading: false,
         canLoadMore: canActuallyLoadMore,
       );
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(
+        error: e.toString(),
+        isLoading: false,
+      );
     }
   }
 
   Future<void> fetchNextPage() async {
-    final selectedLimit = _ref.read(selectedQuestionLimitProvider);
-    if (state.isLoadingMore ||
-        !state.canLoadMore ||
-        state.questions.length >= selectedLimit) {
-      if (state.questions.length >= selectedLimit && state.canLoadMore) {
-        // 추가: 더 로드할 수 있다고 착각하는 경우 방지
-        state = state.copyWith(canLoadMore: false, isLoadingMore: false);
-      }
-      return;
-    }
-    state = state.copyWith(isLoadingMore: true, error: null, clearError: true);
+    if (state.isLoadingMore || !state.canLoadMore) return;
+
     try {
-      final nextPage = state.currentPage + 1;
-      // 다음 페이지에서 가져올 문제 수 결정: selectedLimit - 현재까지 로드된 문제 수
-      // 하지만 API는 페이지 단위로 가져오므로, limit은 selectedLimit을 그대로 사용하되,
-      // 가져온 후에는 selectedLimit을 넘지 않도록 잘라내거나,
-      // 또는 API의 limit 파라미터는 페이지당 가져올 최대 개수이므로 selectedLimit을 사용
+      state = state.copyWith(isLoadingMore: true);
+      final selectedLimit = _ref.read(selectedQuestionLimitProvider);
+      final answeredIds = _ref.read(answeredQuestionIdsProvider);
+
       final response = await _newsQuizService.getQuestions(
-          page: nextPage, limit: selectedLimit); // API limit은 선택된 전체 limit으로 요청
-
-      List<Question> newQuestions = response.questions;
-      List<Question> combinedQuestions = [...state.questions, ...newQuestions];
-
-      // 선택된 limit을 초과하지 않도록 질문 목록 조정
-      if (combinedQuestions.length > selectedLimit) {
-        combinedQuestions = combinedQuestions.sublist(0, selectedLimit);
-      }
-
-      final bool canActuallyLoadMore =
-          response.currentPage < response.totalPages &&
-              combinedQuestions.length < selectedLimit;
+        page: state.currentPage + 1,
+        limit: selectedLimit,
+        excludeIds: answeredIds,
+      );
 
       state = state.copyWith(
-        questions: combinedQuestions,
+        questions: [...state.questions, ...response.questions],
         currentPage: response.currentPage,
         totalPages: response.totalPages,
-        totalQuestions: response.totalQuestions,
         isLoadingMore: false,
-        canLoadMore: canActuallyLoadMore,
       );
     } catch (e) {
-      state = state.copyWith(isLoadingMore: false, error: e.toString());
+      state = state.copyWith(
+        error: e.toString(),
+        isLoadingMore: false,
+      );
     }
   }
 
@@ -158,7 +160,6 @@ class QuestionsNotifier extends StateNotifier<QuestionsState> {
     state = state.copyWith(
         isLoading: true,
         error: null,
-        clearError: true,
         questions: [],
         currentPage: 0,
         totalPages: 0,
@@ -187,28 +188,35 @@ class QuestionsNotifier extends StateNotifier<QuestionsState> {
         // API 호출 시 limit은 newsQuizService의 페이지당 기본 limit을 따르거나,
         // 여기서는 selectedLimitProvider의 현재 값을 사용한다 (저장된 limit이 아닌).
         final currentSelectedLimit = _ref.read(selectedQuestionLimitProvider);
+        final answeredIds = _ref.read(answeredQuestionIdsProvider);
 
-        final response = await _newsQuizService.getQuestions(
-            page: currentPageToFetch, limit: currentSelectedLimit);
-        allPotentiallyNeededQuestions.addAll(response.questions);
-        moreDataExistsInApi = response.currentPage < response.totalPages;
-        currentPageToFetch++;
-        if (response.questions.isEmpty && moreDataExistsInApi) {
-          // 가져온 문제가 없는데 더 있다면 무한루프 방지
-          moreDataExistsInApi = false; // 문제가 없으면 더 이상 가져올 수 없음으로 처리
-        }
+        final response = await http.get(
+          Uri.parse(
+              '${_newsQuizService.baseUrl}/api/openai/questions?page=$currentPageToFetch&limit=$currentSelectedLimit&excludeIds=${answeredIds.join(",")}'),
+        );
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          final questions = (data['questions'] as List)
+              .map((q) => Question.fromJson(q))
+              .toList();
+          allPotentiallyNeededQuestions.addAll(questions);
+          moreDataExistsInApi = data['currentPage'] < data['totalPages'];
+          currentPageToFetch++;
+          if (questions.isEmpty && moreDataExistsInApi) {
+            moreDataExistsInApi = false;
+          }
 
-        // 너무 많은 데이터를 가져오는 것을 방지하기 위한 안전장치
-        // (예: limitFromSaved가 매우 크고, 페이지당 문제는 적을 경우)
-        if (currentPageToFetch > response.totalPages + 5 &&
-            response.totalPages > 0) {
-          // 예시: 5페이지 이상 초과 시 중단
-          break;
-        }
-        if (allPotentiallyNeededQuestions.length >= limitFromSaved * 2 &&
-            limitFromSaved > 0) {
-          // 예상보다 2배 이상 많으면 중단
-          break;
+          if (currentPageToFetch > data['totalPages'] + 5 &&
+              data['totalPages'] > 0) {
+            break;
+          }
+          if (allPotentiallyNeededQuestions.length >= limitFromSaved * 2 &&
+              limitFromSaved > 0) {
+            // 예상보다 2배 이상 많으면 중단
+            break;
+          }
+        } else {
+          throw Exception('Failed to load more questions');
         }
       }
 
@@ -252,8 +260,7 @@ final questionsStateNotifierProvider =
     StateNotifierProvider<QuestionsNotifier, QuestionsState>((ref) {
   final newsQuizService = ref.watch(newsQuizServiceProvider);
   final selectedLimit = ref.watch(selectedQuestionLimitProvider);
-  return QuestionsNotifier(
-      newsQuizService, selectedLimit, ref); // ref 객체 전체를 전달
+  return QuestionsNotifier(newsQuizService, selectedLimit, ref);
 });
 
 // --- 기존 Provider 수정 및 신규 Provider ---
@@ -421,10 +428,8 @@ final totalQuestionCountDisplayProvider = Provider<int>((ref) {
 // 현재 풀고 있는 문제 번호 (1부터 시작, main/fill-in-the-blank 모두 고려)
 final currentQuestionNumberDisplayProvider = Provider<int>((ref) {
   final questionsState = ref.watch(questionsStateNotifierProvider);
-  final overallQuestionIndex =
-      ref.watch(currentQuestionIndexProvider); // 현재 Question 객체의 인덱스
-  final currentPart =
-      ref.watch(currentQuestionPartTypeProvider); // 현재 Question 객체의 파트
+  final overallQuestionIndex = ref.watch(currentQuestionIndexProvider);
+  final currentPart = ref.watch(currentQuestionPartTypeProvider);
 
   if (questionsState.questions.isEmpty ||
       overallQuestionIndex >= questionsState.questions.length) {
@@ -432,29 +437,6 @@ final currentQuestionNumberDisplayProvider = Provider<int>((ref) {
   }
 
   int count = 0;
-  for (int i = 0; i < overallQuestionIndex; i++) {
-    count++; // mainIdeaQuestion
-    if (questionsState.questions[i].fillInTheBlankQuestion != null) {
-      count++; // fillInTheBlankQuestion (존재한다면)
-    }
-  }
-
-  count++; // 현재 Question 객체의 mainIdeaQuestion
-  if (currentPart == QuestionPartType.fillInTheBlank &&
-      questionsState.questions[overallQuestionIndex].fillInTheBlankQuestion !=
-          null) {
-    // 현재 fill-in-the-blank를 풀고 있다면 +1 (이미 mainIdea는 위에서 count됨)
-    // 이부분은 currentQuestionIndexProvider가 다음 Question 객체로 넘어가기 전에 fillInTheBlank를 처리하므로,
-    // 실제로는 mainIdea를 풀 때, fillInTheBlank를 풀 때 모두 동일한 overallQuestionIndex를 가짐.
-    // 따라서, count는 mainIdea 기준으로 계산하고, 만약 현재가 fillInTheBlank면 +1을 해주는게 아니라,
-    // mainIdea 파트를 셀 때 이미 +1이 되었고, fillInTheBlank 파트를 풀고 있다면 그 다음 번호여야함.
-    // 좀 더 명확하게: 이전 문제까지의 파트 수 + 현재 문제의 mainIdea 파트 (+1) + (현재 fillInTheBlank 풀고있으면 +1)
-  } else if (currentPart == QuestionPartType.mainIdea) {
-    // mainIdea를 풀고 있는 경우는 위에서 이미 count++ 되었음.
-  }
-  // 위 로직은 복잡하니, 단순화: 각 Question 객체는 1 또는 2개의 "풀어야 할 문제"를 가짐
-  // 이전 문제들까지 풀었던 "풀어야 할 문제"의 총합 + 현재 문제에서 몇 번째 "풀어야 할 문제"인지
-  count = 0; // 재계산
   for (int i = 0; i < overallQuestionIndex; i++) {
     count++; // mainIdeaQuestion
     if (questionsState.questions[i].fillInTheBlankQuestion != null) {

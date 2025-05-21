@@ -6,6 +6,7 @@ import 'package:language_learning_app/features/news/domain/models/question.dart'
 import 'package:language_learning_app/features/news/presentation/providers/news_quiz_provider.dart';
 import 'package:language_learning_app/features/news/domain/models/quiz_progress_state.dart'; // QuizProgressState 임포트
 import 'package:language_learning_app/features/news/presentation/providers/select_question_count_provider.dart'; // selectedQuestionLimitProvider 임포트
+import 'package:language_learning_app/features/news/presentation/providers/answered_question_ids_provider.dart'; // answeredQuestionIdsProvider 임포트
 
 // ConsumerStatefulWidget으로 변경 이유: 앱 라이프사이클(예: 백그라운드 전환) 감지 및 퀴즈 상태 저장을 위함.
 class NewsQuizScreen extends ConsumerStatefulWidget {
@@ -102,6 +103,12 @@ class _NewsQuizScreenState extends ConsumerState<NewsQuizScreen>
       ref.read(userResponsesProvider.notifier).state = {
         ...userResponses,
       }..remove(currentQuestion.hashCode);
+
+      // 이미 푼 문제 ID 추가
+      ref.read(answeredQuestionIdsProvider.notifier).state = [
+        ...ref.read(answeredQuestionIdsProvider),
+        currentQuestion.id,
+      ];
 
       final questionsState = ref.read(questionsStateNotifierProvider);
       final currentPartType = ref.read(currentQuestionPartTypeProvider);
