@@ -19,13 +19,22 @@ const getQuestions = async (req, res) => {
     const { 
       page = 1,
       limit = 10,
-      excludeIds = [] // 이미 푼 문제 ID 배열
+      excludeIds = [], // 이미 푼 문제 ID 배열
+      difficulty // 난이도 필터 추가
     } = req.query;
 
     // 쿼리 조건 구성
     const query = {};
     if (excludeIds && excludeIds.length > 0) {
       query._id = { $nin: excludeIds };
+    }
+    
+    // 난이도 필터 추가
+    if (difficulty && ['easy', 'medium', 'hard'].includes(difficulty)) {
+      query.$or = [
+        { 'main_idea_question.difficulty': difficulty },
+        { 'fill_in_the_blank_question.difficulty': difficulty }
+      ];
     }
 
     // 페이지네이션 계산
@@ -104,9 +113,48 @@ const generateQuestionFromHeadline = async (req, res) => {
   }
 };
 
+// 답안 제출
+const submitAnswer = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { answer, isCorrect } = req.body;
+
+    if (!answer) {
+      return res.status(400).json({ error: 'Answer is required' });
+    }
+
+    const question = await Question.findById(id);
+    if (!question) {
+      return res.status(404).json({ error: 'Question not found' });
+    }
+
+    // 사용자 응답 저장
+    if (!question.userResponses) {
+      question.userResponses = [];
+    }
+
+    question.userResponses.push({
+      answer,
+      isCorrect: isCorrect !== undefined ? isCorrect : null,
+      submittedAt: new Date()
+    });
+
+    await question.save();
+
+    res.json({ 
+      success: true,
+      message: 'Answer submitted successfully'
+    });
+  } catch (error) {
+    console.error('Error submitting answer:', error);
+    res.status(500).json({ error: 'Failed to submit answer' });
+  }
+};
+
 module.exports = {
   getHeadlines,
   getQuestions,
   getQuestionsByDate,
-  generateQuestionFromHeadline
+  generateQuestionFromHeadline,
+  submitAnswer
 }; 

@@ -1,26 +1,67 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:language_learning_app/features/practice/presentation/screens/speaking_practice_screen.dart';
-import 'package:language_learning_app/features/practice/presentation/screens/quiz_screen.dart';
-import 'package:language_learning_app/features/home/presentation/screens/home_screen.dart';
-import 'package:language_learning_app/features/news/presentation/screens/news_screen.dart';
-import 'package:language_learning_app/features/news/presentation/screens/news_quiz_screen.dart';
-import 'package:language_learning_app/features/news/domain/models/quiz_progress_state.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:go_router/go_router.dart';
+import 'package:get_it/get_it.dart';
+import 'core/injection/injection.dart';
+import 'core/local_storage/hive_service.dart';
+import 'features/home/presentation/pages/home_screen.dart';
+import 'features/news/presentation/pages/news_page.dart';
+import 'features/news/presentation/pages/result_screen.dart';
+import 'features/news/domain/entities/question_entity.dart';
+import 'features/wrong_answers/presentation/pages/wrong_answers_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load .env file from project root
-  await dotenv.load(fileName: '../.env');
+  // Initialize dependencies
+  configureDependencies();
 
+  // Initialize Hive
   await Hive.initFlutter();
-  Hive.registerAdapter(QuizProgressStateAdapter());
 
-  runApp(const ProviderScope(child: MyApp()));
+  // Initialize Hive service
+  final hiveService = GetIt.instance<HiveService>();
+  await hiveService.init();
+
+  // Load environment variables
+  await dotenv.load(fileName: ".env");
+
+  runApp(const MyApp());
 }
+
+// GoRouter 설정
+final GoRouter _router = GoRouter(
+  initialLocation: '/',
+  routes: [
+    GoRoute(
+      path: '/',
+      builder: (context, state) => const HomeScreen(),
+    ),
+    GoRoute(
+      path: '/questions',
+      builder: (context, state) => const NewsPage(),
+    ),
+    GoRoute(
+      path: '/questions/wrong-answers',
+      builder: (context, state) {
+        final wrongQuestionItems = state.extra as List<QuestionItem>?;
+        return NewsPage(wrongQuestionItems: wrongQuestionItems);
+      },
+    ),
+    GoRoute(
+      path: '/wrong-answers',
+      builder: (context, state) => const WrongAnswersScreen(),
+    ),
+    GoRoute(
+      path: '/result',
+      builder: (context, state) {
+        final questionItems = state.extra as List<QuestionItem>;
+        return ResultScreen(questionItems: questionItems);
+      },
+    ),
+  ],
+);
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -29,84 +70,15 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'Language Learning App',
-      debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        primarySwatch: Colors.blue,
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6750A4),
+          seedColor: Colors.blue,
           brightness: Brightness.light,
         ),
-        appBarTheme: const AppBarTheme(
-          centerTitle: true,
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          foregroundColor: Color(0xFF1C1B1F),
-        ),
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-          selectedItemColor: Color(0xFF6750A4),
-          unselectedItemColor: Color(0xFF49454F),
-          backgroundColor: Colors.white,
-          elevation: 8,
-        ),
-        cardTheme: CardThemeData(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            elevation: 0,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.grey[100],
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF6750A4)),
-          ),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        ),
       ),
-      routerConfig: GoRouter(
-        initialLocation: '/',
-        routes: [
-          GoRoute(
-            path: '/',
-            builder: (context, state) => const HomeScreen(),
-          ),
-          GoRoute(
-            path: '/quiz',
-            builder: (context, state) => const QuizScreen(),
-          ),
-          GoRoute(
-            path: '/speaking',
-            builder: (context, state) => const SpeakingPracticeScreen(),
-          ),
-          GoRoute(
-            path: '/news',
-            builder: (context, state) => const NewsScreen(),
-          ),
-          GoRoute(
-            path: '/news/quiz',
-            builder: (context, state) => const NewsQuizScreen(),
-          ),
-        ],
-      ),
+      routerConfig: _router,
     );
   }
 }

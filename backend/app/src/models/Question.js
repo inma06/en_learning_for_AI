@@ -1,5 +1,12 @@
 const mongoose = require('mongoose');
 
+// Sub-schema for user responses
+const UserResponseSchema = new mongoose.Schema({
+  answer: { type: String, required: true },
+  isCorrect: { type: Boolean, default: null },
+  submittedAt: { type: Date, default: Date.now }
+}, {_id: false});
+
 // Sub-schema for Main Idea Question
 const MainIdeaQuestionSchema = new mongoose.Schema({
   question: { type: String, required: true },
@@ -8,8 +15,12 @@ const MainIdeaQuestionSchema = new mongoose.Schema({
   difficulty: { 
     type: String, 
     enum: ['easy', 'medium', 'hard'], 
-    required: true 
-  }
+    required: false // 기존 데이터와의 호환성을 위해 optional로 변경
+  },
+  // 한국어 번역 필드 추가
+  question_ko: { type: String, required: false },
+  choices_ko: [{ type: String, required: false }], // 한국어 선택지 배열
+  answer_ko: { type: String, required: false } // 한국어 정답
 }, {_id: false});
 
 // Sub-schema for Fill In The Blank Question
@@ -21,8 +32,13 @@ const FillInTheBlankQuestionSchema = new mongoose.Schema({
   difficulty: { 
     type: String, 
     enum: ['easy', 'medium', 'hard'], 
-    required: true 
-  }
+    required: false // 기존 데이터와의 호환성을 위해 optional로 변경
+  },
+  // 한국어 번역 필드 추가
+  question_text_with_blank_ko: { type: String, required: false },
+  question_prompt_ko: { type: String, required: false },
+  choices_ko: [{ type: String, required: false }], // 한국어 선택지 배열
+  answer_ko: { type: String, required: false } // 한국어 정답
 }, {_id: false});
 
 // Main Question Schema
@@ -38,6 +54,16 @@ const QuestionSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  // 한국어 번역 필드 추가
+  headline_ko: {
+    type: String,
+    required: false,
+    trim: true
+  },
+  paragraph_ko: {
+    type: String,
+    required: false
+  },
   source: { // source 필드 추가
     type: String,
     required: true,
@@ -51,6 +77,7 @@ const QuestionSchema = new mongoose.Schema({
     type: FillInTheBlankQuestionSchema,
     required: false 
   },
+  userResponses: [UserResponseSchema], // 사용자 응답 배열 추가
   createdAt: {
     type: Date,
     default: Date.now,

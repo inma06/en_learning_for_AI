@@ -175,6 +175,98 @@ class CNNCrawler:
             logger.error(f"문제 생성 중 OpenAI API(gpt-4o) 오류 (지문: {paragraph[:100]}...): {e}")
             return None
 
+    def translate_to_korean(self, text: str, text_type: str = "text") -> Optional[str]:
+        """OpenAI GPT-4o를 사용하여 영어를 한국어로 번역"""
+        logger.info(f"한국어 번역 시도 ({text_type}): {text[:100]}...")
+        try:
+            client = openai.OpenAI(api_key=self.openai_api_key)
+            
+            if text_type == "headline":
+                system_prompt = "You are a professional Korean translator specializing in news headlines. Translate the given English news headline into natural, clear Korean that maintains the original meaning and urgency. Keep it concise and appropriate for Korean news style."
+            elif text_type == "paragraph":
+                system_prompt = "You are a professional Korean translator specializing in news articles. Translate the given English news paragraph into natural, clear Korean that maintains the original meaning, tone, and factual accuracy. Use formal Korean writing style appropriate for news articles."
+            elif text_type == "question":
+                system_prompt = "You are a professional Korean translator specializing in educational content. Translate the given English question into natural, clear Korean that maintains the original meaning and educational purpose. Use formal Korean appropriate for exam questions."
+            elif text_type == "choices":
+                system_prompt = "You are a professional Korean translator specializing in educational content. Translate the given English answer choices into natural, clear Korean that maintains the original meaning. Keep them concise and appropriate for multiple choice questions."
+            else:
+                system_prompt = "You are a professional Korean translator. Translate the given English text into natural, clear Korean that maintains the original meaning."
+            
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Translate this to Korean: {text}"}
+                ]
+            )
+            
+            translation = response.choices[0].message.content
+            if translation:
+                translation = translation.strip()
+                logger.info(f"한국어 번역 성공 ({text_type})")
+                return translation
+            logger.warning(f"빈 번역 응답 ({text_type})")
+            return None
+        except Exception as e:
+            logger.error(f"한국어 번역 중 오류 ({text_type}): {e}")
+            return None
+
+    def translate_question_data(self, question_data: Dict) -> Dict:
+        """문제 데이터를 한국어로 번역"""
+        logger.info("문제 데이터 한국어 번역 시작")
+        translated_data = question_data.copy()
+        
+        try:
+            # Main idea question 번역
+            if 'main_idea_question' in translated_data:
+                main_q = translated_data['main_idea_question']
+                
+                # 질문 번역
+                main_q['question_ko'] = self.translate_to_korean(main_q['question'], "question")
+                
+                # 선택지들 번역
+                choices_ko = []
+                for choice in main_q['choices']:
+                    choice_ko = self.translate_to_korean(choice, "choices")
+                    choices_ko.append(choice_ko if choice_ko else choice)
+                main_q['choices_ko'] = choices_ko
+                
+                # 정답 번역 (정답은 선택지 중 하나이므로 해당하는 한국어 선택지를 찾음)
+                try:
+                    answer_index = main_q['choices'].index(main_q['answer'])
+                    main_q['answer_ko'] = choices_ko[answer_index]
+                except (ValueError, IndexError):
+                    main_q['answer_ko'] = self.translate_to_korean(main_q['answer'], "choices")
+            
+            # Fill in the blank question 번역
+            if 'fill_in_the_blank_question' in translated_data:
+                blank_q = translated_data['fill_in_the_blank_question']
+                
+                # 질문들 번역
+                blank_q['question_text_with_blank_ko'] = self.translate_to_korean(blank_q['question_text_with_blank'], "question")
+                blank_q['question_prompt_ko'] = self.translate_to_korean(blank_q['question_prompt'], "question")
+                
+                # 선택지들 번역
+                choices_ko = []
+                for choice in blank_q['choices']:
+                    choice_ko = self.translate_to_korean(choice, "choices")
+                    choices_ko.append(choice_ko if choice_ko else choice)
+                blank_q['choices_ko'] = choices_ko
+                
+                # 정답 번역
+                try:
+                    answer_index = blank_q['choices'].index(blank_q['answer'])
+                    blank_q['answer_ko'] = choices_ko[answer_index]
+                except (ValueError, IndexError):
+                    blank_q['answer_ko'] = self.translate_to_korean(blank_q['answer'], "choices")
+            
+            logger.info("문제 데이터 한국어 번역 완료")
+            return translated_data
+            
+        except Exception as e:
+            logger.error(f"문제 데이터 번역 중 오류: {e}")
+            return question_data  # 번역 실패시 원본 반환
+
     def crawl_headlines(self) -> List[str]:
         """CNN에서 헤드라인 수집"""
         try:
@@ -199,7 +291,7 @@ class CNNCrawler:
             raise CrawlerError(f"헤드라인 파싱 실패: {e}")
 
     def process_headline(self, headline: str) -> bool:
-        """단일 헤드라인 처리 (OpenAI gpt-4o 사용)"""
+        """단일 헤드라인 처리 (OpenAI gpt-4o 사용, 한국어 번역 포함)"""
         try:
             current_date = datetime.now(timezone.utc)
             
@@ -216,21 +308,28 @@ class CNNCrawler:
             if not paragraph:
                 logger.warning(f"OpenAI(gpt-4o) 지문 생성 실패, 헤드라인 건너뛰기: {headline}")
                 return False
-            # logger.info(f"OpenAI(gpt-4o) 지문 생성 완료 (헤드라인: {headline})") # 함수 내부에서 로깅
 
-            # 2. 뉴스 지문으로 문제 생성 (gpt-4o)
+            # 2. 헤드라인과 본문 한국어 번역
+            headline_ko = self.translate_to_korean(headline, "headline")
+            paragraph_ko = self.translate_to_korean(paragraph, "paragraph")
+
+            # 3. 뉴스 지문으로 문제 생성 (gpt-4o)
             question_data = self.generate_question_from_paragraph(paragraph)
             if not question_data:
                 logger.warning(f"OpenAI(gpt-4o) 문제 생성 실패, 헤드라인 건너뛰기: {headline}")
                 return False
-            # logger.info(f"OpenAI(gpt-4o) 문제 생성 완료 (헤드라인: {headline})") # 함수 내부에서 로깅
+
+            # 4. 문제 데이터 한국어 번역
+            translated_question_data = self.translate_question_data(question_data)
 
             question_doc = {
                 'headline': headline,
                 'paragraph': paragraph,
+                'headline_ko': headline_ko,
+                'paragraph_ko': paragraph_ko,
                 'source': 'CNN', # 출처(source) 필드 추가
-                'main_idea_question': question_data.get('main_idea_question'),
-                'fill_in_the_blank_question': question_data.get('fill_in_the_blank_question'),
+                'main_idea_question': translated_question_data.get('main_idea_question'),
+                'fill_in_the_blank_question': translated_question_data.get('fill_in_the_blank_question'),
                 'createdAt': current_date,
                 # 최상위 difficulty 및 category 필드는 각 문제 객체 내로 이동하거나 제거됨
                 # 'difficulty': 'medium', 
@@ -239,7 +338,7 @@ class CNNCrawler:
             
             if not self.questions_collection.find_one({'headline': headline}):
                 self.questions_collection.insert_one(question_doc)
-                logger.info(f"지문 및 문제 (gpt-4o) 저장 완료: {headline}")
+                logger.info(f"지문, 문제 및 한국어 번역 (gpt-4o) 저장 완료: {headline}")
                 return True
             else:
                 logger.info(f"이미 처리된 헤드라인(문제 존재), 건너뛰기: {headline}")
@@ -251,7 +350,7 @@ class CNNCrawler:
     def run(self):
         """크롤러 실행"""
         try:
-            logger.info("CNN 헤드라인 크롤러 시작 (OpenAI gpt-4o 사용)...")
+            logger.info("CNN 헤드라인 크롤러 시작 (OpenAI gpt-4o 사용, 한국어 번역 포함)...")
             headlines = self.crawl_headlines()
             success_count = 0
             for headline in headlines:

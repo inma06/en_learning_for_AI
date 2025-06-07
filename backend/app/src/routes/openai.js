@@ -3,7 +3,8 @@ const router = express.Router();
 const { 
   getHeadlines,
   getQuestions,
-  getQuestionsByDate
+  getQuestionsByDate,
+  submitAnswer
 } = require('../controllers/openaiController');
 const apiLimiter = require('../middlewares/rateLimiter');
 const cache = require('../middlewares/cache');
@@ -20,5 +21,8 @@ router.post('/questions', getQuestions);
 
 // 특정 날짜의 문제 조회 (5분 캐시)
 router.get('/questions/date/:date', cache(300), getQuestionsByDate);
+
+// 답안 제출
+router.post('/questions/:id/answer', submitAnswer);
 
 module.exports = router; 
